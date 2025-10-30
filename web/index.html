@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Elfeed Offline</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/css/app.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Elfeed Offline</h1>
+      <form id="search-form">
+        <input id="q" type="text" placeholder="@3-days-old or a query…" />
+        <button type="submit">Search</button>
+      </form>
+      <p id="status" class="muted">ready</p>
+    </header>
+
+    <main>
+      <aside id="results"></aside>
+      <section id="reader">
+        <iframe id="content"></iframe>
+      </section>
+    </main>
+
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/service-worker.js");
+        console.log("Service worker registered.");
+      }
+    </script>
+    <script src="/js/app.js"></script>
+  </body>
+</html>
