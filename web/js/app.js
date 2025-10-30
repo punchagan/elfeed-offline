@@ -27,12 +27,21 @@ async function search(q) {
   try {
     const res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json(); // elfeed returns an array
+    const data = await res.json();
     renderResults(data);
-    status(`loaded ${data.length} items`);
+    switch (res.headers.get("X-Cache")) {
+      case "HIT":
+        status(`loaded ${data.length} items (from cache)`);
+        break;
+      case "NEAR":
+        status(`loaded ${data.length} items (latest cached search)`);
+        break;
+      default:
+        status(`loaded ${data.length} items (from server)`);
+    }
   } catch (e) {
     console.warn("search failed", e);
-    status("offline or backend unavailable — showing cache if any");
+    status("offline or backend unavailable & no cache data found");
   }
 }
 
