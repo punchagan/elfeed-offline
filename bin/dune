@@ -1,0 +1,4 @@
+(executable
+ (public_name elfeed-offline)
+ (name main)
+ (libraries elfeed_offline dream))
