@@ -62,7 +62,10 @@ let makeEntry data =
         let contentUrl =
           Jstr.append (Jstr.of_string "/elfeed/content/") contentHash
         in
+        (* Set src of IFrame *)
         El.set_at At.Name.src (Some contentUrl) contentEl ;
+        (* Set reading mode *)
+        Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
         () )
       (El.as_target entry)
   in
@@ -123,6 +126,7 @@ let search () =
       Fut.ok ()
 
 let () =
+  (* Hook up search-form submit event handler *)
   let formEl = get_element_by_id_exn "search-form" in
   let _listener =
     Ev.listen submit
@@ -131,6 +135,15 @@ let () =
         setStatus "searching ..." ;
         Fut.await (search ()) (fun _ -> ()) )
       (El.as_target formEl)
+  in
+  (* Hook up back-btn click handler *)
+  let backBtnEl = get_element_by_id_exn "back" in
+  let _ =
+    Ev.listen Ev.click
+      (fun _ ->
+        Document.body G.document
+        |> El.set_class (Jstr.of_string "reading") false )
+      (El.as_target backBtnEl)
   in
   (* Initial load *)
   let qEl = get_element_by_id_exn "q" in
