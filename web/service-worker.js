@@ -42,7 +42,22 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== location.origin) return;
 
-  if (
+  if (SHELL.includes(url.pathname)) {
+    e.respondWith(
+      (async () => {
+        const cache = await caches.open(C_SHELL);
+        try {
+          const resp = await fetch(e.request);
+          await cache.put(e.request, resp.clone());
+          return resp;
+        } catch (err) {
+          console.warn("Fetch failed; returning cached page instead.", err);
+          const cached = await cache.match(e.request);
+          if (cached) return withHeader(cached, "X-Cache", "HIT");
+        }
+      })(),
+    );
+  } else if (
     url.pathname.startsWith("/elfeed/content/") ||
     url.pathname === "/elfeed/search"
   ) {
