@@ -18,8 +18,9 @@
 (package
  (name elfeed-offline)
  (synopsis "Offline-first Elfeed (proxy) server with PWA")
- (description "Dream-based proxy + offline PWA, caches entries and syncs tags.")
- (depends ocaml dream cohttp  cohttp-lwt-unix lwt)
+ (description
+  "Dream-based proxy + offline PWA, caches entries and syncs tags.")
+ (depends ocaml dream cohttp cohttp-lwt-unix lwt brr)
  (tags
   ("elfeed" "rss" "feeds" "PWA" "offline" "proxy" "dream")))
 

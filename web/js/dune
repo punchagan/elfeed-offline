@@ -1,0 +1,11 @@
+(executable
+ (name app)
+ (modes js)
+ (libraries brr))
+
+(rule
+ (mode promote)
+ (target app.js)
+ (deps app.bc.js)
+ (action
+  (copy %{deps} %{target})))
