@@ -1,7 +1,11 @@
 open Brr
 module Fetch = Brr_io.Fetch
+module Message = Brr_io.Message
+module Sw = Brr_webworkers.Service_worker
 
 let submit = Ev.Type.create (Jstr.of_string "submit")
+
+let last_entries : Jv.t list ref = ref []
 
 let get_element_by_id_exn id =
   match id |> Jstr.of_string |> Document.find_el_by_id G.document with
@@ -15,6 +19,11 @@ let set_status txt =
   let text_node = El.txt (Jstr.v txt) in
   El.set_children status_el [text_node]
 
+let set_status_prefetch msg =
+  let el = get_element_by_id_exn "prefetch-status" in
+  let text_node = El.txt (Jstr.v msg) in
+  El.set_children el [text_node]
+
 let get_query () =
   let q_el = get_element_by_id_exn "q" in
   El.prop El.Prop.value q_el |> Jstr.trim
@@ -26,6 +35,22 @@ let format_date (data : Jv.t) =
   let month = Jv.to_int (Jv.call d "getMonth" [||]) + 1 in
   let day = Jv.to_int (Jv.call d "getDate" [||]) in
   Printf.sprintf "%04d-%02d-%02d" year month day |> Jstr.of_string
+
+let prefetch_top_n ?(n = 30) _click_evt =
+  let ids =
+    !last_entries |> List.take n
+    |> List.map (fun entry -> Jv.get entry "content")
+  in
+  let container = Sw.Container.of_navigator G.navigator in
+  match Sw.Container.controller container with
+  | Some w ->
+      let worker = Sw.as_worker w in
+      Brr_webworkers.Worker.post worker
+        (Jv.obj
+           [|("type", Jv.of_string "PREFETCH"); ("ids", ids |> Jv.of_jv_list)|] ) ;
+      set_status_prefetch (Printf.sprintf "Starting… 0/%d" (List.length ids))
+  | None ->
+      set_status_prefetch "No service worker found."
 
 let make_entry data =
   let title = Jv.get data "title" |> Jv.to_jstr in
@@ -77,6 +102,7 @@ let display_results response =
   let headers = Fetch.Response.headers response in
   let* data = response |> Fetch.Response.as_body |> Fetch.Body.json in
   let data_list = Jv.to_jv_list data in
+  last_entries := data_list ;
   let children = data |> Jv.to_jv_list |> List.map make_entry in
   let results_el = get_element_by_id_exn "results" in
   El.set_children results_el children ;
@@ -126,26 +152,52 @@ let search () =
             "" ) ) ;
       Fut.ok ()
 
+let on_message e =
+  let data = e |> Ev.as_type |> Message.Ev.data in
+  match Jv.to_string (Jv.get data "type") with
+  | "PREFETCH_PROGRESS" ->
+      let done_ = Jv.to_int (Jv.get data "done") in
+      let total = Jv.to_int (Jv.get data "total") in
+      set_status_prefetch (Printf.sprintf "Saving… %d/%d" done_ total)
+  | "PREFETCH_DONE" ->
+      let total = Jv.to_int (Jv.get data "total") in
+      set_status_prefetch
+        (Printf.sprintf "Saved %d items for offline reading." total)
+  | "PREFETCH_STOP" ->
+      let reason = Jv.to_string (Jv.get data "reason") in
+      set_status_prefetch (Printf.sprintf "Stopped: %s" reason)
+  | _ ->
+      ()
+
 let () =
   (* Hook up search-form submit event handler *)
   let form_el = get_element_by_id_exn "search-form" in
-  let _listener =
-    Ev.listen submit
-      (fun e ->
-        Ev.prevent_default e ;
-        set_status "searching ..." ;
-        Fut.await (search ()) (fun _ -> ()) )
-      (El.as_target form_el)
-  in
+  Ev.listen submit
+    (fun e ->
+      Ev.prevent_default e ;
+      set_status "searching ..." ;
+      Fut.await (search ()) (fun _ -> ()) )
+    (El.as_target form_el)
+  |> ignore ;
   (* Hook up back-btn click handler *)
   let back_btn_el = get_element_by_id_exn "back" in
-  let _ =
-    Ev.listen Ev.click
-      (fun _ ->
-        Document.body G.document
-        |> El.set_class (Jstr.of_string "reading") false )
-      (El.as_target back_btn_el)
+  Ev.listen Ev.click
+    (fun _ ->
+      Document.body G.document |> El.set_class (Jstr.of_string "reading") false )
+    (El.as_target back_btn_el)
+  |> ignore ;
+  (* Hook up offline btn click handler *)
+  let n = 100 in
+  let offline_btn_el = get_element_by_id_exn "save-offline" in
+  let text_node =
+    n |> Printf.sprintf "Save top %d offline" |> Jstr.of_string |> El.txt
   in
+  El.set_children offline_btn_el [text_node] ;
+  Ev.listen Ev.click (prefetch_top_n ~n) (El.as_target offline_btn_el) |> ignore ;
+  (* Hook up message listener  *)
+  let container = Sw.Container.of_navigator G.navigator in
+  Ev.listen Message.Ev.message on_message (Sw.Container.as_target container)
+  |> ignore ;
   (* Initial load *)
   let q_el = get_element_by_id_exn "q" in
   El.set_at At.Name.value (Some (Jstr.of_string "@30-days-old")) q_el ;

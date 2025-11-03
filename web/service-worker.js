@@ -7,6 +7,9 @@ const SHELL = [
 ];
 const C_SHELL = "shell-v1";
 const C_CONTENT = "content-v1";
+const META = "meta-v1";
+const PREFETCH_CONCURRENCY = 4;
+const PREFETCH_MAX_BYTES = 40 * 1024 * 1024; // soft cap (~40 MB)
 
 const withHeader = (resp, key, value) => {
   const headers = new Headers(resp.headers);
@@ -92,5 +95,92 @@ self.addEventListener("fetch", (e) => {
       })(),
     );
     return;
+  }
+});
+
+async function notifyAll(msg) {
+  const cs = await self.clients.matchAll();
+  cs.forEach((c) => c.postMessage(msg));
+}
+
+async function metaPut(key, info) {
+  const m = await caches.open(META);
+  await m.put(
+    key + ":meta",
+    new Response(JSON.stringify(info), {
+      headers: { "content-type": "application/json" },
+    }),
+  );
+}
+
+async function metaGet(key) {
+  const m = await caches.open(META);
+  const r = await m.match(key + ":meta");
+  return r ? await r.json() : null;
+}
+
+async function bytesUsed(cacheName) {
+  const c = await caches.open(cacheName);
+  const keys = await c.keys();
+  let total = 0;
+  for (const k of keys) {
+    const mi = (await metaGet(k.url)) || {};
+    total += mi.size || 0;
+  }
+  return total;
+}
+
+async function prefetchIds(ids) {
+  const cache = await caches.open(C_CONTENT);
+  const q = ids.slice();
+  let done = 0;
+  const start = await bytesUsed(C_CONTENT);
+
+  async function worker() {
+    while (q.length) {
+      const id = q.shift();
+      const url = `/elfeed/content/${id}`;
+      const req = new Request(url, { credentials: "same-origin" });
+
+      if (await cache.match(req)) {
+        done++;
+        notifyAll({ type: "PREFETCH_PROGRESS", done, total: ids.length });
+        continue;
+      }
+
+      try {
+        const resp = await fetch(req);
+        const clone = resp.clone();
+        await cache.put(req, resp);
+        const size = (await clone.arrayBuffer()).byteLength;
+        await metaPut(url, { ts: Date.now(), size });
+        done++;
+        notifyAll({ type: "PREFETCH_PROGRESS", done, total: ids.length });
+
+        if (start + size > PREFETCH_MAX_BYTES) {
+          notifyAll({ type: "PREFETCH_STOP", reason: "quota" });
+          q.length = 0; // stop
+          return;
+        }
+      } catch {
+        // ignore; continue with next
+        done++;
+        notifyAll({ type: "PREFETCH_PROGRESS", done, total: ids.length });
+      }
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(PREFETCH_CONCURRENCY, ids.length) },
+    worker,
+  );
+  await Promise.all(workers);
+  notifyAll({ type: "PREFETCH_DONE", total: ids.length });
+}
+
+self.addEventListener("message", (e) => {
+  const msg = e.data || {};
+  if (msg.type === "PREFETCH" && Array.isArray(msg.ids)) {
+    e.waitUntil(prefetchIds(msg.ids));
   }
 });

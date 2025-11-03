@@ -76,10 +76,14 @@ main {
     display: none;
 }
 
+button {
+    cursor: pointer;
+    padding: 6px 10px;
+}
+
 /* Full-screen reader when body.reading is set */
 @media (max-width: 800px) {
     .back-btn {
-        padding: 6px 10px;
         display: block;
     }
     main {
