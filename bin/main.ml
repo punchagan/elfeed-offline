@@ -2,7 +2,9 @@ module Proxy = Elfeed_offline.Proxy
 
 let () =
   let open Dream in
-  run ~port:9000 @@ logger
+  run ~interface:"0.0.0.0" ~port:9000 ~certificate_file:"ssl/server.pem"
+    ~key_file:"ssl/server.key" ~tls:true
+  @@ logger
   @@ router
        [ (* Proxy /elfeed endpoints to the Elfeed server *)
          get "/elfeed/**" (fun req -> Proxy.forward req `GET)
