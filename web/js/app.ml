@@ -74,11 +74,25 @@ let make_entry data =
       (Jstr.of_string "span")
       [El.txt date]
   in
+  let tags = try Jv.get data "tags" |> Jv.to_list Jv.to_jstr with _ -> [] in
+  let tags_el =
+    let tag_chip (t : Jstr.t) =
+      let label = Jstr.(append (of_string "#") t) in
+      El.v
+        ~at:[At.v At.Name.class' (Jstr.of_string "tag")]
+        (Jstr.of_string "span")
+        [El.txt label]
+    in
+    let chips = List.map tag_chip tags in
+    El.v
+      ~at:[At.v At.Name.class' (Jstr.of_string "tags")]
+      (Jstr.of_string "div") chips
+  in
   let entry =
     El.v
       ~at:[At.v At.Name.class' (Jstr.of_string "entry")]
       (Jstr.of_string "div")
-      [date_el; title_el; feed_el]
+      [date_el; title_el; feed_el; tags_el]
   in
   let _ =
     Ev.listen Ev.click
