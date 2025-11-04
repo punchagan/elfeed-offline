@@ -196,8 +196,13 @@ let () =
   Ev.listen Ev.click (prefetch_top_n ~n) (El.as_target offline_btn_el) |> ignore ;
   (* Hook up message listener  *)
   let container = Sw.Container.of_navigator G.navigator in
-  Ev.listen Message.Ev.message on_message (Sw.Container.as_target container)
-  |> ignore ;
+  ( match
+      Ev.listen Message.Ev.message on_message (Sw.Container.as_target container)
+    with
+  | _ ->
+      ()
+  | exception Jv.Error _ ->
+      set_status_prefetch "Failed to setup service worker!" ) ;
   (* Initial load *)
   let q_el = get_element_by_id_exn "q" in
   El.set_at At.Name.value (Some (Jstr.of_string "@30-days-old")) q_el ;
