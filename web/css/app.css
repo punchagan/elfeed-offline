@@ -16,6 +16,7 @@ body {
 header {
     padding: 12px 16px;
     border-bottom: 1px solid #ccc;
+    height: 160px;
 }
 header h1 {
     margin: 0 0 8px 0;
@@ -31,14 +32,14 @@ header input {
 main {
     display: grid;
     grid-template-columns: 420px 1fr;
-    height: calc(100vh - 120px);
+    height: calc(100vh - 165px);
 }
 #results {
     overflow: auto;
     border-right: 1px solid #ccc;
 }
 #reader {
-    height: calc(100vh - 120px);
+    height: auto;
 }
 #content {
     width: 100%;
@@ -79,6 +80,7 @@ main {
 button {
     cursor: pointer;
     padding: 6px 10px;
+    display: inline-block;
 }
 
 /* Tags */
@@ -106,7 +108,7 @@ button {
 /* Full-screen reader when body.reading is set */
 @media (max-width: 800px) {
     .back-btn {
-        display: block;
+        display: inline-block;
     }
     main {
         grid-template-columns: 1fr;

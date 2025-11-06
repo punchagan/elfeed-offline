@@ -204,8 +204,7 @@ let on_message e =
       set_status_prefetch (Printf.sprintf "Saving… %d/%d" done_ total)
   | "PREFETCH_DONE" ->
       let total = Jv.to_int (Jv.get data "total") in
-      set_status_prefetch
-        (Printf.sprintf "Saved %d items for offline reading." total)
+      set_status_prefetch (Printf.sprintf "Saved %d items." total)
   | "PREFETCH_STOP" ->
       let reason = Jv.to_string (Jv.get data "reason") in
       set_status_prefetch (Printf.sprintf "Stopped: %s" reason)
