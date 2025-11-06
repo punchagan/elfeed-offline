@@ -52,6 +52,11 @@ let prefetch_top_n ?(n = 30) _click_evt =
   | None ->
       set_status_prefetch "No service worker found."
 
+let submit_search_form () =
+  let submit_event = Ev.create submit in
+  let form_el = get_element_by_id_exn "search-form" in
+  Ev.dispatch submit_event (El.as_target form_el) |> ignore
+
 let make_entry data =
   let title = Jv.get data "title" |> Jv.to_jstr in
   let title_el =
@@ -220,4 +225,4 @@ let () =
   (* Initial load *)
   let q_el = get_element_by_id_exn "q" in
   El.set_at At.Name.value (Some (Jstr.of_string "@30-days-old")) q_el ;
-  Fut.await (search ()) (fun _ -> ())
+  submit_search_form ()
