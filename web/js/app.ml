@@ -57,6 +57,25 @@ let submit_search_form () =
   let form_el = get_element_by_id_exn "search-form" in
   Ev.dispatch submit_event (El.as_target form_el) |> ignore
 
+let add_tag_to_search evt =
+  Ev.prevent_default evt ;
+  Ev.stop_propagation evt ;
+  let target = Ev.target evt in
+  let tag_text =
+    Ev.target_to_jv target |> El.of_jv |> El.text_content |> Jstr.to_string
+  in
+  let tag_text = String.sub tag_text 1 (String.length tag_text - 1) in
+  let tag_text = String.cat "+" tag_text |> Jstr.of_string in
+  let q_el = get_element_by_id_exn "q" in
+  let current_q = El.prop El.Prop.value q_el in
+  let new_q =
+    if Jstr.is_empty current_q then tag_text
+    else if Jstr.find_sub ~sub:tag_text current_q <> None then current_q
+    else Jstr.append current_q (Jstr.append (Jstr.of_string " ") tag_text)
+  in
+  El.set_prop El.Prop.value new_q q_el ;
+  submit_search_form ()
+
 let make_entry data =
   let title = Jv.get data "title" |> Jv.to_jstr in
   let title_el =
@@ -89,6 +108,11 @@ let make_entry data =
         [El.txt label]
     in
     let chips = List.map tag_chip tags in
+    (* Click handler for tags *)
+    List.iter
+      (fun tag_el ->
+        Ev.listen Ev.click add_tag_to_search (El.as_target tag_el) |> ignore )
+      chips ;
     El.v
       ~at:[At.v At.Name.class' (Jstr.of_string "tags")]
       (Jstr.of_string "div") chips
