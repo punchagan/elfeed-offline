@@ -135,6 +135,18 @@ let make_entry data =
         El.set_at At.Name.src (Some content_url) content_el ;
         (* Set reading mode *)
         Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
+        (* Set data property on mark-read & mark-unread button *)
+        let webid = Jv.get data "webid" in
+        let mark_read_btn_el = get_element_by_id_exn "mark-read" in
+        let mark_unread_btn_el = get_element_by_id_exn "mark-unread" in
+        El.set_at
+          (Jstr.of_string "data-webid")
+          (Some (Jv.to_jstr webid))
+          mark_read_btn_el ;
+        El.set_at
+          (Jstr.of_string "data-webid")
+          (Some (Jv.to_jstr webid))
+          mark_unread_btn_el ;
         () )
       (El.as_target entry)
   in
@@ -211,6 +223,28 @@ let on_message e =
   | _ ->
       ()
 
+let update_tag_data data =
+  let url = "/elfeed/tags" |> Jstr.of_string in
+  let body = data |> Json.encode |> Fetch.Body.of_jstr in
+  let init = Fetch.Request.init ~body ~method':(Jstr.of_string "put") () in
+  Fut.await (Fetch.url url ~init) (fun _resp -> ())
+
+let mark_entry_as_read web_id =
+  let data =
+    Jv.obj
+      [| ("entries", [Jstr.of_string web_id] |> Jv.of_jstr_list)
+       ; ("remove", [Jstr.of_string "unread"] |> Jv.of_jstr_list) |]
+  in
+  update_tag_data data
+
+let mark_entry_as_unread web_id =
+  let data =
+    Jv.obj
+      [| ("entries", [Jstr.of_string web_id] |> Jv.of_jstr_list)
+       ; ("add", [Jstr.of_string "unread"] |> Jv.of_jstr_list) |]
+  in
+  update_tag_data data
+
 let () =
   (* Hook up search-form submit event handler *)
   let form_el = get_element_by_id_exn "search-form" in
@@ -227,6 +261,24 @@ let () =
     (fun _ ->
       Document.body G.document |> El.set_class (Jstr.of_string "reading") false )
     (El.as_target back_btn_el)
+  |> ignore ;
+  (* Hook up mark-as-read handler *)
+  let mark_read_btn_el = get_element_by_id_exn "mark-read" in
+  Ev.listen Ev.click
+    (fun _ ->
+      let web_id = El.at (Jstr.of_string "data-webid") mark_read_btn_el in
+      web_id
+      |> Option.iter (fun id -> id |> Jstr.to_string |> mark_entry_as_read) )
+    (El.as_target mark_read_btn_el)
+  |> ignore ;
+  (* Hook up mark-as-unread handler *)
+  let mark_unread_btn_el = get_element_by_id_exn "mark-unread" in
+  Ev.listen Ev.click
+    (fun _ ->
+      let web_id = El.at (Jstr.of_string "data-webid") mark_unread_btn_el in
+      web_id
+      |> Option.iter (fun id -> id |> Jstr.to_string |> mark_entry_as_unread) )
+    (El.as_target mark_unread_btn_el)
   |> ignore ;
   (* Hook up offline btn click handler *)
   let n = 100 in
