@@ -76,6 +76,22 @@ let add_tag_to_search evt =
   El.set_prop El.Prop.value new_q q_el ;
   submit_search_form ()
 
+let set_open_original (href_opt : Jstr.t option) =
+  let link_el = get_element_by_id_exn "open-original" in
+  let target_attr = Jstr.of_string "target" in
+  match href_opt with
+  | Some href ->
+      El.set_at At.Name.href (Some href) link_el ;
+      El.set_at target_attr (Some (Jstr.v "_blank")) link_el ;
+      El.set_at At.Name.rel (Some (Jstr.v "noopener")) link_el ;
+      El.set_class (Jstr.v "muted") false link_el ;
+      El.set_at (Jstr.v "aria-disabled") (Some (Jstr.v "false")) link_el
+  | None ->
+      (* No URL available; make it look disabled *)
+      El.set_at At.Name.href (Some (Jstr.v "#")) link_el ;
+      El.set_class (Jstr.v "muted") true link_el ;
+      El.set_at (Jstr.v "aria-disabled") (Some (Jstr.v "true")) link_el
+
 let make_entry data =
   let title = Jv.get data "title" |> Jv.to_jstr in
   let title_el =
@@ -135,6 +151,8 @@ let make_entry data =
         El.set_at At.Name.src (Some content_url) content_el ;
         (* Set reading mode *)
         Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
+        (* Set current entry href *)
+        Some (Jv.get data "link" |> Jv.to_jstr) |> set_open_original ;
         (* Set data property on mark-read & mark-unread button *)
         let webid = Jv.get data "webid" in
         let mark_read_btn_el = get_element_by_id_exn "mark-read" in
