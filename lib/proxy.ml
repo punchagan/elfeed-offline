@@ -2,6 +2,22 @@ open Lwt.Infix
 
 let upstream = Uri.of_string "http://127.0.0.1:8080"
 
+let is_content_uri uri =
+  uri |> Uri.path |> String.starts_with ~prefix:"/elfeed/content/"
+
+let wrapped_html html =
+  Printf.sprintf
+    "<!doctype html>\n\
+     <html>\n\
+     <head>\n\
+     <meta charset='utf-8' />\n\
+     <base target='_blank' /></head>\n\
+     <body>\n\
+     %s\n\
+     </body>\n\
+     </html>"
+    html
+
 let forward (req : Dream.request) meth =
   let client_uri = Uri.of_string (Dream.target req) in
   let target = Uri.with_path upstream (Uri.path client_uri) in
@@ -26,6 +42,7 @@ let forward (req : Dream.request) meth =
   >>= fun (resp, content) ->
   Cohttp_lwt.Body.to_string content
   >>= fun s ->
+  let html = if is_content_uri client_uri then wrapped_html s else s in
   let headers = Http.Response.headers resp |> Cohttp.Header.to_list in
   let status = Cohttp.Response.status resp |> Cohttp.Code.code_of_status in
-  Dream.respond ~headers ~status:(Dream.int_to_status status) s
+  Dream.respond ~headers ~status:(Dream.int_to_status status) html
