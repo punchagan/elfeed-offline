@@ -10,6 +10,11 @@ let wrapped_html html =
     "<!doctype html>\n\
      <html>\n\
      <head>\n\
+     <style type='text/css'>\n\
+     :root {\n\
+    \   color-scheme: light dark;\n\
+     }\n\
+     </style>\n\
      <meta charset='utf-8' />\n\
      <base target='_blank' /></head>\n\
      <body>\n\
