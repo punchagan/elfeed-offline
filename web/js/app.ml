@@ -245,7 +245,7 @@ let mark_entry_as_unread web_id =
   in
   update_tag_data data
 
-let () =
+let setup_handlers () =
   (* Hook up search-form submit event handler *)
   let form_el = get_element_by_id_exn "search-form" in
   Ev.listen submit
@@ -290,13 +290,16 @@ let () =
   Ev.listen Ev.click (prefetch_top_n ~n) (El.as_target offline_btn_el) |> ignore ;
   (* Hook up message listener  *)
   let container = Sw.Container.of_navigator G.navigator in
-  ( match
-      Ev.listen Message.Ev.message on_message (Sw.Container.as_target container)
-    with
+  match
+    Ev.listen Message.Ev.message on_message (Sw.Container.as_target container)
+  with
   | _ ->
       ()
   | exception Jv.Error _ ->
-      set_status_prefetch "Failed to setup service worker!" ) ;
+      set_status_prefetch "Failed to setup service worker!"
+
+let () =
+  setup_handlers () ;
   (* Initial load *)
   let q_el = get_element_by_id_exn "q" in
   El.set_at At.Name.value (Some (Jstr.of_string "@30-days-old +unread")) q_el ;
