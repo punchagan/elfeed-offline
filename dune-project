@@ -15,12 +15,22 @@
 
 (documentation https://github.com/punchagan/elfeed-offline)
 
+(pin
+ (url "git+https://github.com/punchagan/ocaml-uri#equal-pct-encoded")
+ (package
+  (name uri)))
+
+(pin
+ (url "git+https://github.com/punchagan/ocaml-uri#equal-pct-encoded")
+ (package
+  (name uri-sexp)))
+
 (package
  (name elfeed-offline)
  (synopsis "Offline-first Elfeed (proxy) server with PWA")
  (description
   "Dream-based proxy + offline PWA, caches entries and syncs tags.")
- (depends ocaml dream cohttp cohttp-lwt-unix lwt brr)
+ (depends ocaml dream cohttp cohttp-lwt-unix lwt brr uri uri-sexp)
  (tags
   ("elfeed" "rss" "feeds" "PWA" "offline" "proxy" "dream")))
 
