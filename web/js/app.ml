@@ -76,6 +76,31 @@ let add_tag_to_search evt =
   El.set_prop El.Prop.value new_q q_el ;
   submit_search_form ()
 
+let add_feed_url_to_search evt =
+  Ev.prevent_default evt ;
+  Ev.stop_propagation evt ;
+  let target = Ev.target evt in
+  let feed_title =
+    Ev.target_to_jv target |> El.of_jv
+    |> El.at (Jstr.of_string "data-url")
+    |> Option.map Jstr.to_string
+  in
+  match feed_title with
+  | None ->
+      ()
+  | Some feed_title ->
+      let tag_text = Printf.sprintf "=%s" feed_title |> Jstr.of_string in
+      let q_el = get_element_by_id_exn "q" in
+      let current_q = El.prop El.Prop.value q_el in
+      if Jstr.find_sub ~sub:tag_text current_q <> None then ()
+      else
+        let new_q =
+          if Jstr.is_empty current_q then tag_text
+          else Jstr.append current_q (Jstr.append (Jstr.of_string " ") tag_text)
+        in
+        El.set_prop El.Prop.value new_q q_el ;
+        submit_search_form ()
+
 let set_open_original (href_opt : Jstr.t option) =
   let link_el = get_element_by_id_exn "open-original" in
   let target_attr = Jstr.of_string "target" in
@@ -101,12 +126,17 @@ let make_entry data =
       [El.txt title]
   in
   let feed = Jv.get data "feed" |> (fun x -> Jv.get x "title") |> Jv.to_jstr in
+  let feed_url =
+    Jv.get data "feed" |> (fun x -> Jv.get x "url") |> Jv.to_jstr
+  in
   let feed_el =
     El.v
       ~at:[At.v At.Name.class' (Jstr.of_string "feed")]
       (Jstr.of_string "span")
       [El.txt feed]
   in
+  El.set_at (Jstr.of_string "data-url") (Some feed_url) feed_el ;
+  Ev.listen Ev.click add_feed_url_to_search (El.as_target feed_el) |> ignore ;
   let date = format_date data in
   let date_el =
     El.v
