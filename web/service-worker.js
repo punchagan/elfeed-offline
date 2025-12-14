@@ -21,6 +21,20 @@ const withHeader = (resp, key, value) => {
   });
 };
 
+const locks = new Map();
+
+const withLock = (key, fn) => {
+  const prev = locks.get(key) || Promise.resolve();
+  const next = prev.then(fn, fn); // keep chain alive even if fn throws
+  locks.set(
+    key,
+    next.finally(() => {
+      if (locks.get(key) === next) locks.delete(key);
+    }),
+  );
+  return next;
+};
+
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(C_SHELL).then((c) => c.addAll(SHELL)));
   self.skipWaiting();
@@ -95,10 +109,80 @@ const getHandler = async (e) => {
   }
 };
 
+const mergeTagsOffline = async (body) => {
+  const OFFLINE_TAGS_URL = "http://sw.local/elfeed/offline-tags";
+  return withLock(OFFLINE_TAGS_URL, async () => {
+    const offlineTags = (await metaGet(OFFLINE_TAGS_URL)) || {};
+    // body example: { entries: [...], add?: [...], remove?: [...] } where
+    // add/remove are lists of tags to add/remove from all entries. We merge
+    // these into offlineTags.
+    const toStore = { ...offlineTags };
+    for (const entry of body.entries) {
+      const addTags = toStore?.add || {};
+      const removeTags = toStore?.remove || {};
+      if (Array.isArray(body.add)) {
+        for (const tag of body.add) {
+          // Add entry to a list associated with the tag
+          const tagEntries = new Set(addTags[tag] || []);
+          tagEntries.add(entry);
+          addTags[tag] = Array.from(tagEntries);
+          if (removeTags[tag]) {
+            const updated = new Set(removeTags[tag]);
+            updated.delete(entry);
+            removeTags[tag] = Array.from(updated);
+          }
+        }
+      }
+      if (Array.isArray(body.remove)) {
+        for (const tag of body.remove) {
+          // Add entry to a list associated with the tag
+          const tagEntries = new Set(removeTags[tag] || []);
+          tagEntries.add(entry);
+          removeTags[tag] = Array.from(tagEntries);
+          // Also remove from addTags if present
+          if (addTags[tag]) {
+            const updated = new Set(addTags[tag]);
+            updated.delete(entry);
+            addTags[tag] = Array.from(updated);
+          }
+        }
+      }
+      toStore.add = addTags;
+      toStore.remove = removeTags;
+      console.log("Merged offline tags for entry:", entry);
+    }
+    await metaPut(OFFLINE_TAGS_URL, toStore);
+  });
+};
+
+const putHandler = async (e) => {
+  const url = new URL(e.request.url);
+  if (url.pathname === "/elfeed/tags") {
+    e.respondWith(
+      (async () => {
+        // Clone the body to use in case of failure, because request bodies can
+        // only be read once. Making the fetch request makes the body unusable
+        // in case of failure, so we clone it first.
+        const clone = e.request.clone();
+        try {
+          const resp = await fetch(e.request);
+          return resp;
+        } catch (err) {
+          // Cache the request body for later syncing
+          const body = await clone.json();
+          await mergeTagsOffline(body);
+          return new Response(null, { status: 202 });
+        }
+      })(),
+    );
+  }
+};
+
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
-  if (e.request.method === "GET") getHandler(e);
+  else if (e.request.method === "GET") getHandler(e);
+  else if (e.request.method === "PUT") putHandler(e);
 });
 
 async function notifyAll(msg) {
