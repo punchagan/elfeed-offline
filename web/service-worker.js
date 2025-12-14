@@ -41,10 +41,8 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
-self.addEventListener("fetch", (e) => {
+const getHandler = async (e) => {
   const url = new URL(e.request.url);
-  if (e.request.method !== "GET" || url.origin !== location.origin) return;
-
   if (SHELL.includes(url.pathname)) {
     e.respondWith(
       (async () => {
@@ -94,8 +92,13 @@ self.addEventListener("fetch", (e) => {
         }
       })(),
     );
-    return;
   }
+};
+
+self.addEventListener("fetch", (e) => {
+  const url = new URL(e.request.url);
+  if (url.origin !== location.origin) return;
+  if (e.request.method === "GET") getHandler(e);
 });
 
 async function notifyAll(msg) {
