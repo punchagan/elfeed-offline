@@ -316,7 +316,9 @@ let setup_handlers () =
   let back_btn_el = get_element_by_id_exn "back" in
   Ev.listen Ev.click
     (fun _ ->
-      Document.body G.document |> El.set_class (Jstr.of_string "reading") false )
+      Document.body G.document |> El.set_class (Jstr.of_string "reading") false ;
+      let content_el = get_element_by_id_exn "content" in
+      El.set_at At.Name.src (Some (Jstr.v "about:blank")) content_el )
     (El.as_target back_btn_el)
   |> ignore ;
   (* Hook up mark-as-read handler *)
