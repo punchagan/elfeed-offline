@@ -81,6 +81,8 @@ const getHandler = async (e) => {
         const cache = await caches.open("content-v1");
         try {
           const resp = await fetch(e.request);
+          // Try syncing offline tags, if any
+          e.waitUntil(syncOfflineTags());
           // We delete and put since keys are FIFO and we want the most recent
           // at the end for search caches.
           await cache.delete(e.request);
@@ -109,8 +111,9 @@ const getHandler = async (e) => {
   }
 };
 
+const OFFLINE_TAGS_URL = "http://sw.local/elfeed/offline-tags";
+
 const mergeTagsOffline = async (body) => {
-  const OFFLINE_TAGS_URL = "http://sw.local/elfeed/offline-tags";
   return withLock(OFFLINE_TAGS_URL, async () => {
     const offlineTags = (await metaGet(OFFLINE_TAGS_URL)) || {};
     // body example: { entries: [...], add?: [...], remove?: [...] } where
@@ -152,6 +155,63 @@ const mergeTagsOffline = async (body) => {
       console.log("Merged offline tags for entry:", entry);
     }
     await metaPut(OFFLINE_TAGS_URL, toStore);
+  });
+};
+
+const syncOfflineTags = async () => {
+  return withLock(OFFLINE_TAGS_URL, async () => {
+    const pending = await metaGet(OFFLINE_TAGS_URL);
+    if (!pending) return;
+
+    const add = pending.add || {};
+    const remove = pending.remove || {};
+
+    const hasWork =
+      Object.keys(add).length > 0 || Object.keys(remove).length > 0;
+    if (!hasWork) return;
+
+    console.log("Syncing offline tags:", JSON.stringify(pending));
+
+    // helper: send one op, and only clear entries if it succeeded
+    const sendOp = async (entries, kind, tag) => {
+      const body = { entries };
+      body[kind] = [tag]; // kind is "add" or "remove"
+      const resp = await fetch("/elfeed/tags", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return resp.ok;
+    };
+
+    // Try syncing all adds
+    for (const [tag, entries] of Object.entries(add)) {
+      if (!entries || entries.length === 0) continue;
+      let ok;
+      try {
+        ok = await sendOp(entries, "add", tag);
+      } catch {
+        return; // server not reachable
+      }
+      if (!ok) return; // stop; keep pending
+      delete add[tag]; // sent successfully
+    }
+
+    // Try syncing all removes
+    for (const [tag, entries] of Object.entries(remove)) {
+      if (!entries || entries.length === 0) continue;
+      let ok;
+      try {
+        ok = await sendOp(entries, "remove", tag);
+      } catch {
+        return;
+      }
+      if (!ok) return;
+      delete remove[tag];
+    }
+
+    // Persist cleared state
+    await metaPut(OFFLINE_TAGS_URL, { add, remove });
   });
 };
 
