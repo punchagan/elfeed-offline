@@ -322,7 +322,18 @@ async function prefetchIds(ids) {
     worker,
   );
   await Promise.all(workers);
-  notifyAll({ type: "PREFETCH_DONE", total: ids.length });
+  if (done === ids.length)
+    notifyAll({ type: "PREFETCH_DONE", total: ids.length });
+  else if (done === 0)
+    notifyAll({
+      type: "PREFETCH_STOP",
+      reason: `Failed to save entries!`,
+    });
+  else
+    notifyAll({
+      type: "PREFETCH_STOP",
+      reason: `Only ${done} of ${ids.length} entries prefetched`,
+    });
 }
 
 self.addEventListener("message", (e) => {
