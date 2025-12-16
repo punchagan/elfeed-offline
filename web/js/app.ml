@@ -145,6 +145,7 @@ let make_entry data =
       [El.txt date]
   in
   let tags = try Jv.get data "tags" |> Jv.to_list Jv.to_jstr with _ -> [] in
+  let is_unread = List.exists (fun t -> Jstr.equal t (Jstr.v "unread")) tags in
   let tags_el =
     let tag_chip (t : Jstr.t) =
       let label = Jstr.(append (of_string "#") t) in
@@ -165,7 +166,9 @@ let make_entry data =
   in
   let entry =
     El.v
-      ~at:[At.v At.Name.class' (Jstr.of_string "entry")]
+      ~at:
+        [ "entry" |> Jstr.v |> At.class'
+        ; (if is_unread then "unread" else "") |> Jstr.v |> At.class' ]
       (Jstr.of_string "div")
       [date_el; title_el; feed_el; tags_el]
   in

@@ -63,6 +63,9 @@ main {
 .entry:hover {
     background: rgba(0, 0, 0, 0.05);
 }
+.entry.unread {
+    border-left: 4px solid rgb(229, 109, 37, 0.75);
+}
 .title {
     display: block;
     font-weight: 600;
