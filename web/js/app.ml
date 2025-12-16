@@ -148,13 +148,16 @@ let make_entry data =
   let is_unread = List.exists (fun t -> Jstr.equal t (Jstr.v "unread")) tags in
   let tags_el =
     let tag_chip (t : Jstr.t) =
-      let label = Jstr.(append (of_string "#") t) in
-      El.v
-        ~at:[At.v At.Name.class' (Jstr.of_string "tag")]
-        (Jstr.of_string "span")
-        [El.txt label]
+      if Jstr.equal t (Jstr.v "unread") then None
+      else
+        let label = Jstr.(append (of_string "#") t) in
+        Some
+          (El.v
+             ~at:[At.v At.Name.class' (Jstr.of_string "tag")]
+             (Jstr.of_string "span")
+             [El.txt label] )
     in
-    let chips = List.map tag_chip tags in
+    let chips = List.filter_map tag_chip tags in
     (* Click handler for tags *)
     List.iter
       (fun tag_el ->
