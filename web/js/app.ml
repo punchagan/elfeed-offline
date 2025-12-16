@@ -224,6 +224,8 @@ let display_results response =
           match Jstr.to_string t with
           | "HIT" ->
               " (from cache)"
+          | "HIT-X" ->
+              " (from cache; Emacs elfeed server offline)"
           | "NEAR" ->
               " (from latest cached search)"
           | _ ->
@@ -242,24 +244,25 @@ let search () =
   | Error e ->
       let msg =
         e |> Jv.Error.message |> Jstr.to_string
-        |> fun s -> "Failed to search with error:" ^ s
+        |> Printf.sprintf "Search aborted: %s"
       in
-      set_status msg ; failwith msg
-  | Ok s ->
+      msg |> Jstr.v |> Jv.Error.v |> Fut.error
+  | Ok s -> (
       let open Fut.Result_syntax in
       let url = Jstr.append base s in
       let resp = Fetch.url url in
       let* response = resp in
       let status = Fetch.Response.status response in
-      ignore
-        ( if status <> 200 then (
-            set_status "offline or backend unavailable & no cache data found" ;
-            failwith "Server returned with status code: " ^ string_of_int status
-            )
-          else (
-            Fut.await (display_results response) (fun _ -> ()) ;
-            "" ) ) ;
-      Fut.ok ()
+      match status with
+      | 200 ->
+          display_results response
+      | 500 | 403 (* Emacs elfeed server stopped, but httpd running *) ->
+          Fut.error (Jv.Error.v (Jstr.v "Is the Emacs elfeed server running?"))
+      | _ ->
+          Fut.error
+            (Jv.Error.v
+               (Jstr.v "offline or backend unavailable & no cache data found") )
+      )
 
 let on_message e =
   let data = e |> Ev.as_type |> Message.Ev.data in
@@ -315,7 +318,14 @@ let setup_handlers () =
     (fun e ->
       Ev.prevent_default e ;
       set_status "searching ..." ;
-      Fut.await (search ()) (fun _ -> ()) )
+      Fut.await (search ()) (fun r ->
+          match r with
+          | Error e ->
+              e |> Jv.Error.message |> Jstr.to_string
+              |> Printf.sprintf "Search failed: %s"
+              |> set_status
+          | _ ->
+              () ) )
     (El.as_target form_el)
   |> ignore ;
   (* Hook up back-btn click handler *)

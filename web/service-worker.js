@@ -79,32 +79,48 @@ const getHandler = async (e) => {
     e.respondWith(
       (async () => {
         const cache = await caches.open("content-v1");
+        let status;
         try {
           const resp = await fetch(e.request);
           // Try syncing offline tags, if any
           e.waitUntil(syncOfflineTags());
           // We delete and put since keys are FIFO and we want the most recent
           // at the end for search caches.
-          await cache.delete(e.request);
-          await cache.put(e.request, resp.clone());
-          return resp;
-        } catch (err) {
-          const cached = await cache.match(e.request);
-          if (cached) return withHeader(cached, "X-Cache", "HIT");
-          // Special handling for search requests: try to find any cached search
-          if (url.pathname === "/elfeed/search") {
-            const keys = (await cache.keys()).reverse();
-            const req = keys.find((req) => req.url.includes("/elfeed/search"));
-            if (req) {
-              const cachedSearch = await cache.match(req);
-              if (cachedSearch)
-                return withHeader(cachedSearch, "X-Cache", "NEAR");
-            }
+          if (resp.ok) {
+            checkCache = false;
+            await cache.delete(e.request);
+            await cache.put(e.request, resp.clone());
+            return resp;
           }
+          status = resp.status;
+        } catch (err) {
+          status = 404;
+          console.warn("Fetch failed; returning cached content instead.", err);
+        }
+        const cached = await cache.match(e.request);
+        // TODO: Use a separate header for elfeed server status, instead of
+        // overloading X-Cache header?
+        const cacheStatus = status === 500 || status === 403 ? "HIT-X" : "HIT";
+        if (cached) return withHeader(cached, "X-Cache", cacheStatus);
+        if (url.pathname.startsWith("/elfeed/content/")) {
           return new Response("<p>Offline and not cached yet.</p>", {
             status: 200,
             headers: { "content-type": "text/html; charset=utf-8" },
           });
+        }
+        // Try to find any cached search requests, if possible
+        else if (url.pathname === "/elfeed/search") {
+          const keys = (await cache.keys()).reverse();
+          const req = keys.find((req) => req.url.includes("/elfeed/search"));
+          if (req) {
+            const cachedSearch = await cache.match(req);
+            return withHeader(cachedSearch, "X-Cache", "NEAR");
+          } else {
+            return new Response("{}", {
+              status: status,
+              headers: { "content-type": "application/json; charset=utf-8" },
+            });
+          }
         }
       })(),
     );
