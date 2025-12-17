@@ -154,8 +154,8 @@ let make_entry data =
         El.set_at At.Name.src (Some content_url) content_el ;
         (* Set reading mode *)
         Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
-        let link = Jv.get data "link" |> Jv.to_jstr in
-        let webid = Jv.get data "webid" |> Jv.to_jstr in
+        let link = Jv.get data "link" |> Jv.to_string in
+        let webid = Jv.get data "webid" |> Jv.to_string in
         set_selected (Some {webid; link}) ;
         render_nav () )
       (El.as_target entry)

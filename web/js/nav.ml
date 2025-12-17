@@ -2,7 +2,7 @@ open Brr
 open Util
 open Api
 
-type selection = {webid: Jstr.t; link: Jstr.t}
+type selection = {webid: string; link: string}
 
 type status = string
 
@@ -49,7 +49,7 @@ let render_nav () =
       set_button_enabled mark_read_btn true ;
       set_button_enabled mark_unread_btn true ;
       set_button_enabled back_btn_el true ;
-      set_open_original (Some s.link)
+      set_open_original (Some (Jstr.v s.link))
 
 let render_nav_status () =
   let status_el = get_element_by_id_exn "nav-status" in
@@ -107,21 +107,13 @@ let setup_nav_handlers () =
   let mark_read_btn_el = get_element_by_id_exn "mark-read" in
   Ev.listen Ev.click
     (fun _ ->
-      match !selected with
-      | None ->
-          ()
-      | Some s ->
-          s.webid |> Jstr.to_string |> mark_entry_as_read )
+      match !selected with None -> () | Some s -> mark_entry_as_read s.webid )
     (El.as_target mark_read_btn_el)
   |> ignore ;
   (* Hook up mark-as-unread handler *)
   let mark_unread_btn_el = get_element_by_id_exn "mark-unread" in
   Ev.listen Ev.click
     (fun _ ->
-      match !selected with
-      | None ->
-          ()
-      | Some s ->
-          s.webid |> Jstr.to_string |> mark_entry_as_unread )
+      match !selected with None -> () | Some s -> mark_entry_as_unread s.webid )
     (El.as_target mark_unread_btn_el)
   |> ignore
