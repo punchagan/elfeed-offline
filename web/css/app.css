@@ -97,14 +97,13 @@ main {
     font-size: 12px;
 }
 
-#back {
-    display: none;
-}
-
-button {
+button,
+.button {
     cursor: pointer;
     padding: 6px 10px;
     display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 4px;
 }
 
 /* Tags */
@@ -131,9 +130,6 @@ button {
 
 /* Full-screen reader when body.reading is set */
 @media (max-width: 800px) {
-    #back {
-        display: inline-block;
-    }
     main {
         grid-template-columns: 1fr;
         height: calc(100vh - 150px);
