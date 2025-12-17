@@ -2,9 +2,7 @@ open Brr
 open Util
 open Api
 
-type selection = {webid: string; link: string}
-
-type status = string
+type selection = {webid: string; link: string; entry: Jv.t}
 
 let selected = ref None
 
@@ -39,16 +37,25 @@ let render_nav () =
   let mark_read_btn = get_element_by_id_exn "mark-read" in
   let mark_unread_btn = get_element_by_id_exn "mark-unread" in
   let back_btn_el = get_element_by_id_exn "back" in
+  let title_el = get_element_by_id_exn "nav-title" in
+  let feed_el = get_element_by_id_exn "nav-feed" in
   match !selected with
   | None ->
       set_button_enabled mark_read_btn false ;
       set_button_enabled mark_unread_btn false ;
       set_button_enabled back_btn_el false ;
+      set_text title_el "" ;
       set_open_original None
   | Some s ->
       set_button_enabled mark_read_btn true ;
       set_button_enabled mark_unread_btn true ;
       set_button_enabled back_btn_el true ;
+      let title = Jv.get s.entry "title" |> Jv.to_string in
+      set_text title_el title ;
+      let feed =
+        Jv.get s.entry "feed" |> (fun x -> Jv.get x "title") |> Jv.to_string
+      in
+      set_text feed_el feed ;
       set_open_original (Some (Jstr.v s.link))
 
 let render_nav_status () =
