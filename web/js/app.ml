@@ -156,7 +156,7 @@ let make_entry data =
         Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
         let link = Jv.get data "link" |> Jv.to_jstr in
         let webid = Jv.get data "webid" |> Jv.to_jstr in
-        selected := Some {webid; link} ;
+        set_selected (Some {webid; link}) ;
         render_nav () )
       (El.as_target entry)
   in

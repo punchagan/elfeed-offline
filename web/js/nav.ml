@@ -1,10 +1,16 @@
 open Brr
 open Util
-open Tag
+open Api
 
 type selection = {webid: Jstr.t; link: Jstr.t}
 
-let selected : selection option ref = ref None
+type status = string
+
+let selected = ref None
+
+let status_msg = ref ""
+
+let set_selected sel = selected := sel
 
 let set_button_enabled el enabled =
   let enabled_attr = if enabled then None else Some (Jstr.v "true") in
@@ -45,6 +51,44 @@ let render_nav () =
       set_button_enabled back_btn_el true ;
       set_open_original (Some s.link)
 
+let render_nav_status () =
+  let status_el = get_element_by_id_exn "nav-status" in
+  El.set_at At.Name.class' (Some (Jstr.v "empty")) status_el ;
+  set_text status_el !status_msg ;
+  G.request_animation_frame (fun _ ->
+      El.set_at At.Name.class' (Some (Jstr.v "set")) status_el )
+  |> ignore
+
+let tag_update_success status =
+  let msg =
+    (* Request has been cached by service worker *)
+    if status = 202 then "Tags will be updated when online"
+    else "Tag data updated successfully"
+  in
+  status_msg := msg ;
+  render_nav_status () ;
+  if status <> 202 then submit_search_form ()
+
+let tag_update_failure () =
+  status_msg := "Failed to update tag data!" ;
+  render_nav_status ()
+
+let mark_entry_as_read web_id =
+  let data =
+    Jv.obj
+      [| ("entries", [Jstr.of_string web_id] |> Jv.of_jstr_list)
+       ; ("remove", [Jstr.of_string "unread"] |> Jv.of_jstr_list) |]
+  in
+  update_tag_data data tag_update_success tag_update_failure
+
+let mark_entry_as_unread web_id =
+  let data =
+    Jv.obj
+      [| ("entries", [Jstr.of_string web_id] |> Jv.of_jstr_list)
+       ; ("add", [Jstr.of_string "unread"] |> Jv.of_jstr_list) |]
+  in
+  update_tag_data data tag_update_success tag_update_failure
+
 let setup_nav_handlers () =
   (* Hook up back-btn click handler *)
   let back_btn_el = get_element_by_id_exn "back" in
@@ -54,7 +98,9 @@ let setup_nav_handlers () =
       let content_el = get_element_by_id_exn "content" in
       El.set_at At.Name.src (Some (Jstr.v "about:blank")) content_el ;
       selected := None ;
-      render_nav () )
+      status_msg := "" ;
+      render_nav () ;
+      render_nav_status () )
     (El.as_target back_btn_el)
   |> ignore ;
   (* Hook up mark-as-read handler *)
