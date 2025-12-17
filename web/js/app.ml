@@ -193,7 +193,7 @@ let display_results response =
   in
   set_status status ; Fut.ok ()
 
-let search () =
+let do_search () =
   let base = "/elfeed/search?q=" |> Jstr.of_string in
   let q = get_query () in
   match q |> Uri.encode_component with
@@ -220,6 +220,16 @@ let search () =
                (Jstr.v "offline or backend unavailable & no cache data found") )
       )
 
+let search () =
+  Fut.await (do_search ()) (fun r ->
+      match r with
+      | Error e ->
+          e |> Jv.Error.message |> Jstr.to_string
+          |> Printf.sprintf "Search failed: %s"
+          |> set_status
+      | _ ->
+          () )
+
 let on_message e =
   let data = e |> Ev.as_type |> Message.Ev.data in
   match Jv.to_string (Jv.get data "type") with
@@ -244,14 +254,7 @@ let setup_handlers () =
     (fun e ->
       Ev.prevent_default e ;
       set_status "searching ..." ;
-      Fut.await (search ()) (fun r ->
-          match r with
-          | Error e ->
-              e |> Jv.Error.message |> Jstr.to_string
-              |> Printf.sprintf "Search failed: %s"
-              |> set_status
-          | _ ->
-              () ) )
+      search () )
     (El.as_target form_el)
   |> ignore ;
   (* Hook up offline btn click handler *)
@@ -279,4 +282,4 @@ let () =
   (* Initial load *)
   let q_el = get_element_by_id_exn "q" in
   El.set_at At.Name.value (Some (Jstr.of_string "@30-days-old +unread")) q_el ;
-  submit_search_form ()
+  search ()
