@@ -37,26 +37,42 @@ let set_open_original (href_opt : Jstr.t option) =
 let render_nav () =
   let mark_read_btn = get_element_by_id_exn "mark-read" in
   let mark_unread_btn = get_element_by_id_exn "mark-unread" in
+  let star_btn = get_element_by_id_exn "star-entry" in
+  let unstar_btn = get_element_by_id_exn "unstar-entry" in
   let copy_url_btn = get_element_by_id_exn "copy-url" in
   let back_btn_el = get_element_by_id_exn "back" in
   let title_el = get_element_by_id_exn "nav-title" in
   let feed_el = get_element_by_id_exn "nav-feed" in
   match state.selected with
   | None ->
+      (* Read/Unread buttons *)
       set_button_enabled mark_read_btn false ;
       set_button_enabled mark_unread_btn false ;
       set_button_visible mark_read_btn true ;
       set_button_visible mark_unread_btn false ;
+      (* Star/Unstar buttons *)
+      set_button_enabled star_btn false ;
+      set_button_enabled unstar_btn false ;
+      set_button_visible star_btn true ;
+      set_button_visible unstar_btn false ;
+      (* Other buttons *)
       set_button_enabled back_btn_el false ;
       set_button_enabled copy_url_btn false ;
       set_text title_el "" ;
       set_open_original None
   | Some s ->
+      (* Read/Unread buttons *)
       set_button_enabled mark_read_btn true ;
       set_button_enabled mark_unread_btn true ;
       let entry = Hashtbl.find state.entries s in
       set_button_visible mark_read_btn entry.is_unread ;
       set_button_visible mark_unread_btn (not entry.is_unread) ;
+      (* Star/Unstar buttons *)
+      set_button_enabled star_btn (not entry.is_starred) ;
+      set_button_enabled unstar_btn entry.is_starred ;
+      set_button_visible star_btn (not entry.is_starred) ;
+      set_button_visible unstar_btn entry.is_starred ;
+      (* Other buttons *)
       set_button_enabled back_btn_el true ;
       set_button_enabled copy_url_btn true ;
       let title = entry.title in
@@ -103,6 +119,22 @@ let mark_entry_as_unread web_id =
   in
   update_tag_data data tag_update_success tag_update_failure
 
+let star_entry web_id =
+  let data =
+    Jv.obj
+      [| ("entries", [Jstr.of_string web_id] |> Jv.of_jstr_list)
+       ; ("add", [Jstr.of_string "starred"] |> Jv.of_jstr_list) |]
+  in
+  update_tag_data data tag_update_success tag_update_failure
+
+let unstar_entry web_id =
+  let data =
+    Jv.obj
+      [| ("entries", [Jstr.of_string web_id] |> Jv.of_jstr_list)
+       ; ("remove", [Jstr.of_string "starred"] |> Jv.of_jstr_list) |]
+  in
+  update_tag_data data tag_update_success tag_update_failure
+
 let close_entry _ =
   Document.body G.document |> El.set_class (Jstr.of_string "reading") false ;
   let content_el = get_element_by_id_exn "content" in
@@ -137,6 +169,20 @@ let setup_nav_handlers () =
       | Some webid ->
           mark_entry_as_unread webid )
     (El.as_target mark_unread_btn_el)
+  |> ignore ;
+  (* Hook up star-entry handler *)
+  let star_btn_el = get_element_by_id_exn "star-entry" in
+  Ev.listen Ev.click
+    (fun _ ->
+      match state.selected with None -> () | Some webid -> star_entry webid )
+    (El.as_target star_btn_el)
+  |> ignore ;
+  (* Hook up unstar-entry handler *)
+  let unstar_btn_el = get_element_by_id_exn "unstar-entry" in
+  Ev.listen Ev.click
+    (fun _ ->
+      match state.selected with None -> () | Some webid -> unstar_entry webid )
+    (El.as_target unstar_btn_el)
   |> ignore ;
   (* Hook up copy-url handler *)
   let copy_url_btn_el = get_element_by_id_exn "copy-url" in

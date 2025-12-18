@@ -8,6 +8,7 @@ type entry =
   ; feed: feed
   ; tags: string list
   ; is_unread: bool
+  ; is_starred: bool
   ; published_ms: float }
 
 type entry_map = (string, entry) Hashtbl.t

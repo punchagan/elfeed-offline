@@ -109,7 +109,7 @@ let make_entry (data : entry) =
   in
   let tags_el =
     let tag_chip tag =
-      if String.equal tag "unread" then None
+      if String.equal tag "unread" || String.equal tag "starred" then None
       else
         let label = Printf.sprintf "#%s" tag in
         Some
@@ -164,10 +164,19 @@ let update_app_state data =
         let published_ms = Jv.get e "date" |> Jv.to_float in
         let tags = Jv.get e "tags" |> Jv.to_list Jv.to_string in
         let is_unread = List.exists (String.equal "unread") tags in
+        let is_starred = List.exists (String.equal "starred") tags in
         let webid = Jv.get e "webid" |> Jv.to_string in
         let link = Jv.get e "link" |> Jv.to_string in
         let content_hash = Jv.get e "content" |> Jv.to_string in
-        {webid; title; link; content_hash; feed; tags; is_unread; published_ms} )
+        { webid
+        ; title
+        ; link
+        ; content_hash
+        ; feed
+        ; tags
+        ; is_unread
+        ; is_starred
+        ; published_ms } )
   in
   let results = List.map (fun e -> e.webid) _entries in
   List.iter (fun e -> Hashtbl.replace state.entries e.webid e) _entries ;
