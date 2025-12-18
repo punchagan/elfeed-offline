@@ -13,6 +13,11 @@ let set_button_enabled el enabled =
     (Some (Jstr.v (if enabled then "false" else "true")))
     el
 
+let set_button_visible el visible =
+  let style_attr = Jstr.of_string "style" in
+  if visible then El.set_at style_attr None el
+  else El.set_at style_attr (Some (Jstr.v "display: none;")) el
+
 let set_open_original (href_opt : Jstr.t option) =
   let link_el = get_element_by_id_exn "open-original" in
   let target_attr = Jstr.of_string "target" in
@@ -40,6 +45,8 @@ let render_nav () =
   | None ->
       set_button_enabled mark_read_btn false ;
       set_button_enabled mark_unread_btn false ;
+      set_button_visible mark_read_btn true ;
+      set_button_visible mark_unread_btn false ;
       set_button_enabled back_btn_el false ;
       set_button_enabled copy_url_btn false ;
       set_text title_el "" ;
@@ -47,9 +54,11 @@ let render_nav () =
   | Some s ->
       set_button_enabled mark_read_btn true ;
       set_button_enabled mark_unread_btn true ;
+      let entry = Hashtbl.find state.entries s in
+      set_button_visible mark_read_btn entry.is_unread ;
+      set_button_visible mark_unread_btn (not entry.is_unread) ;
       set_button_enabled back_btn_el true ;
       set_button_enabled copy_url_btn true ;
-      let entry = Hashtbl.find state.entries s in
       let title = entry.title in
       set_text title_el title ;
       let feed = entry.feed.title in
