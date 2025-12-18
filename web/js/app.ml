@@ -300,4 +300,5 @@ let () =
   (* Initial load *)
   let q_el = get_element_by_id_exn "q" in
   El.set_at At.Name.value (Some (Jstr.of_string "@30-days-old +unread")) q_el ;
-  search ()
+  search () ;
+  render_nav ()
