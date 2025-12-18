@@ -1,6 +1,7 @@
 open Brr
 open Util
 open Api
+module Clipboard = Brr_io.Clipboard
 
 type selection = {webid: string; link: string; entry: Jv.t}
 
@@ -36,6 +37,7 @@ let set_open_original (href_opt : Jstr.t option) =
 let render_nav () =
   let mark_read_btn = get_element_by_id_exn "mark-read" in
   let mark_unread_btn = get_element_by_id_exn "mark-unread" in
+  let copy_url_btn = get_element_by_id_exn "copy-url" in
   let back_btn_el = get_element_by_id_exn "back" in
   let title_el = get_element_by_id_exn "nav-title" in
   let feed_el = get_element_by_id_exn "nav-feed" in
@@ -44,12 +46,14 @@ let render_nav () =
       set_button_enabled mark_read_btn false ;
       set_button_enabled mark_unread_btn false ;
       set_button_enabled back_btn_el false ;
+      set_button_enabled copy_url_btn false ;
       set_text title_el "" ;
       set_open_original None
   | Some s ->
       set_button_enabled mark_read_btn true ;
       set_button_enabled mark_unread_btn true ;
       set_button_enabled back_btn_el true ;
+      set_button_enabled copy_url_btn true ;
       let title = Jv.get s.entry "title" |> Jv.to_string in
       set_text title_el title ;
       let feed =
@@ -123,4 +127,24 @@ let setup_nav_handlers () =
     (fun _ ->
       match !selected with None -> () | Some s -> mark_entry_as_unread s.webid )
     (El.as_target mark_unread_btn_el)
+  |> ignore ;
+  (* Hook up copy-url handler *)
+  let copy_url_btn_el = get_element_by_id_exn "copy-url" in
+  Ev.listen Ev.click
+    (fun _ ->
+      match !selected with
+      | None ->
+          ()
+      | Some s ->
+          let link = Jv.get s.entry "link" |> Jv.to_string |> Jstr.v in
+          let clipboard = Clipboard.of_navigator G.navigator in
+          Fut.await (Clipboard.write_text clipboard link) (fun result ->
+              match result with
+              | Ok () ->
+                  status_msg := "URL copied to clipboard" ;
+                  render_nav_status ()
+              | Error _ ->
+                  status_msg := "Failed to copy URL to clipboard" ;
+                  render_nav_status () ) )
+    (El.as_target copy_url_btn_el)
   |> ignore
