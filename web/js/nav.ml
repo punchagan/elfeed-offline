@@ -72,7 +72,7 @@ let tag_update_success status =
   in
   status_msg := msg ;
   render_nav_status () ;
-  if status <> 202 then submit_search_form ()
+  submit_search_form ()
 
 let tag_update_failure () =
   status_msg := "Failed to update tag data!" ;

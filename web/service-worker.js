@@ -87,10 +87,9 @@ const getHandler = async (e) => {
           // We delete and put since keys are FIFO and we want the most recent
           // at the end for search caches.
           if (resp.ok) {
-            checkCache = false;
             await cache.delete(e.request);
             await cache.put(e.request, resp.clone());
-            return resp;
+            return await patchSearchResponse(resp);
           }
           status = resp.status;
         } catch (err) {
@@ -101,7 +100,12 @@ const getHandler = async (e) => {
         // TODO: Use a separate header for elfeed server status, instead of
         // overloading X-Cache header?
         const cacheStatus = status === 500 || status === 403 ? "HIT-X" : "HIT";
-        if (cached) return withHeader(cached, "X-Cache", cacheStatus);
+        if (cached)
+          return withHeader(
+            await patchSearchResponse(cached),
+            "X-Cache",
+            cacheStatus,
+          );
         if (url.pathname.startsWith("/elfeed/content/")) {
           return new Response("<p>Offline and not cached yet.</p>", {
             status: 200,
@@ -114,7 +118,11 @@ const getHandler = async (e) => {
           const req = keys.find((req) => req.url.includes("/elfeed/search"));
           if (req) {
             const cachedSearch = await cache.match(req);
-            return withHeader(cachedSearch, "X-Cache", "NEAR");
+            return withHeader(
+              await patchSearchResponse(cachedSearch),
+              "X-Cache",
+              "NEAR",
+            );
           } else {
             return new Response("{}", {
               status: status,
@@ -174,20 +182,48 @@ const mergeTagsOffline = async (body) => {
   });
 };
 
+const getPendingTags = async () => {
+  const pending = await metaGet(OFFLINE_TAGS_URL);
+  const add = pending?.add || {};
+  const remove = pending?.remove || {};
+  const hasWork = Object.keys(add).length > 0 || Object.keys(remove).length > 0;
+  return { hasWork, add, remove };
+};
+
+const patchSearchResponse = async (resp) => {
+  if (!resp.ok) return resp;
+  const url = new URL(resp.url);
+  if (url.pathname !== "/elfeed/search") return resp;
+  const { hasWork, add, remove } = await getPendingTags();
+  if (!hasWork) return resp;
+  console.log("Patching search response with offline tags");
+  const entries = await resp.json();
+  const updatedEntries = entries.map((entry) => {
+    const newEntry = { ...entry };
+    for (const [tag, tagEntries] of Object.entries(add)) {
+      if (tagEntries.includes(entry.webid)) {
+        newEntry.tags = Array.from(new Set([...(newEntry.tags || []), tag]));
+      }
+    }
+    for (const [tag, tagEntries] of Object.entries(remove)) {
+      if (tagEntries.includes(entry.webid)) {
+        newEntry.tags = (newEntry.tags || []).filter((t) => t !== tag);
+      }
+    }
+    return newEntry;
+  });
+  return new Response(JSON.stringify(updatedEntries), {
+    status: resp.status,
+    statusText: resp.statusText,
+    headers: resp.headers,
+  });
+};
+
 const syncOfflineTags = async () => {
   return withLock(OFFLINE_TAGS_URL, async () => {
-    const pending = await metaGet(OFFLINE_TAGS_URL);
-    if (!pending) return;
-
-    const add = pending.add || {};
-    const remove = pending.remove || {};
-
-    const hasWork =
-      Object.keys(add).length > 0 || Object.keys(remove).length > 0;
-    if (!hasWork) return;
-
-    console.log("Syncing offline tags:", JSON.stringify(pending));
-
+    const { add, remove, hasWork } = await getPendingTags();
+    if (!hasWork) return; // nothing to do
+    console.log("Syncing offline tags:", JSON.stringify({ add, remove }));
     // helper: send one op, and only clear entries if it succeeded
     const sendOp = async (entries, kind, tag) => {
       const body = { entries };
