@@ -179,7 +179,12 @@ let display_results response =
   let headers = Fetch.Response.headers response in
   let* data = response |> Fetch.Response.as_body |> Fetch.Body.json in
   update_app_state data ;
-  render_nav () ;
+  ( match state.selected with
+  | Some webid ->
+      if not (List.mem webid state.results) then close_entry ()
+      else render_nav ()
+  | None ->
+      () ) ;
   let children =
     state.results
     |> List.map (fun webid -> Hashtbl.find state.entries webid)

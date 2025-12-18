@@ -103,20 +103,19 @@ let mark_entry_as_unread web_id =
   in
   update_tag_data data tag_update_success tag_update_failure
 
+let close_entry _ =
+  Document.body G.document |> El.set_class (Jstr.of_string "reading") false ;
+  let content_el = get_element_by_id_exn "content" in
+  El.set_at At.Name.src (Some (Jstr.v "about:blank")) content_el ;
+  state.selected <- None ;
+  status_msg := "" ;
+  render_nav () ;
+  render_nav_status ()
+
 let setup_nav_handlers () =
   (* Hook up back-btn click handler *)
   let back_btn_el = get_element_by_id_exn "back" in
-  Ev.listen Ev.click
-    (fun _ ->
-      Document.body G.document |> El.set_class (Jstr.of_string "reading") false ;
-      let content_el = get_element_by_id_exn "content" in
-      El.set_at At.Name.src (Some (Jstr.v "about:blank")) content_el ;
-      state.selected <- None ;
-      status_msg := "" ;
-      render_nav () ;
-      render_nav_status () )
-    (El.as_target back_btn_el)
-  |> ignore ;
+  Ev.listen Ev.click close_entry (El.as_target back_btn_el) |> ignore ;
   (* Hook up mark-as-read handler *)
   let mark_read_btn_el = get_element_by_id_exn "mark-read" in
   Ev.listen Ev.click
