@@ -4,8 +4,7 @@ module Message = Brr_io.Message
 module Sw = Brr_webworkers.Service_worker
 open Util
 open Nav
-
-let last_entries : Jv.t list ref = ref []
+open State
 
 let set_status_prefetch msg =
   let el = get_element_by_id_exn "prefetch-status" in
@@ -16,8 +15,8 @@ let get_query () =
   let q_el = get_element_by_id_exn "q" in
   El.prop El.Prop.value q_el |> Jstr.trim
 
-let format_date (data : Jv.t) =
-  let ms = Jv.get data "date" in
+let format_date (ms : float) =
+  let ms = Jv.of_float ms in
   let d = Jv.new' (Jv.get Jv.global "Date") [|ms|] in
   let year = Jv.to_int (Jv.call d "getFullYear" [||]) in
   let month = Jv.to_int (Jv.call d "getMonth" [||]) + 1 in
@@ -26,8 +25,10 @@ let format_date (data : Jv.t) =
 
 let prefetch_top_n ?(n = 30) _click_evt =
   let ids =
-    !last_entries |> List.take n
-    |> List.map (fun entry -> Jv.get entry "content")
+    state.results |> List.take n
+    |> List.map (fun webid ->
+        Hashtbl.find state.entries webid
+        |> fun e -> e.content_hash |> Jv.of_string )
   in
   let container = Sw.Container.of_navigator G.navigator in
   match Sw.Container.controller container with
@@ -84,47 +85,40 @@ let add_feed_url_to_search evt =
         El.set_prop El.Prop.value new_q q_el ;
         submit_search_form ()
 
-let make_entry data =
-  let title = Jv.get data "title" |> Jv.to_jstr in
+let make_entry (data : entry) =
   let title_el =
     El.v
       ~at:[At.v At.Name.class' (Jstr.of_string "title")]
       (Jstr.of_string "span")
-      [El.txt title]
-  in
-  let feed = Jv.get data "feed" |> (fun x -> Jv.get x "title") |> Jv.to_jstr in
-  let feed_url =
-    Jv.get data "feed" |> (fun x -> Jv.get x "url") |> Jv.to_jstr
+      [data.title |> Jstr.v |> El.txt]
   in
   let feed_el =
     El.v
       ~at:[At.v At.Name.class' (Jstr.of_string "feed")]
       (Jstr.of_string "span")
-      [El.txt feed]
+      [data.feed.title |> Jstr.v |> El.txt]
   in
-  El.set_at (Jstr.of_string "data-url") (Some feed_url) feed_el ;
+  El.set_at (Jstr.of_string "data-url") (Some (Jstr.v data.feed.url)) feed_el ;
   Ev.listen Ev.click add_feed_url_to_search (El.as_target feed_el) |> ignore ;
-  let date = format_date data in
+  let date = format_date data.published_ms in
   let date_el =
     El.v
       ~at:[At.v At.Name.class' (Jstr.of_string "date")]
       (Jstr.of_string "span")
       [El.txt date]
   in
-  let tags = try Jv.get data "tags" |> Jv.to_list Jv.to_jstr with _ -> [] in
-  let is_unread = List.exists (fun t -> Jstr.equal t (Jstr.v "unread")) tags in
   let tags_el =
-    let tag_chip (t : Jstr.t) =
-      if Jstr.equal t (Jstr.v "unread") then None
+    let tag_chip tag =
+      if String.equal tag "unread" then None
       else
-        let label = Jstr.(append (of_string "#") t) in
+        let label = Printf.sprintf "#%s" tag in
         Some
           (El.v
              ~at:[At.v At.Name.class' (Jstr.of_string "tag")]
              (Jstr.of_string "span")
-             [El.txt label] )
+             [label |> Jstr.v |> El.txt] )
     in
-    let chips = List.filter_map tag_chip tags in
+    let chips = List.filter_map tag_chip data.tags in
     (* Click handler for tags *)
     List.iter
       (fun tag_el ->
@@ -138,7 +132,7 @@ let make_entry data =
     El.v
       ~at:
         [ "entry" |> Jstr.v |> At.class'
-        ; (if is_unread then "unread" else "") |> Jstr.v |> At.class' ]
+        ; (if data.is_unread then "unread" else "") |> Jstr.v |> At.class' ]
       (Jstr.of_string "div")
       [date_el; title_el; feed_el; tags_el]
   in
@@ -146,32 +140,53 @@ let make_entry data =
     Ev.listen Ev.click
       (fun _ ->
         let content_el = get_element_by_id_exn "content" in
-        let content_hash = Jv.get data "content" |> Jv.to_jstr in
-        let content_url =
-          Jstr.append (Jstr.of_string "/elfeed/content/") content_hash
-        in
+        let content_hash = data.content_hash in
+        let content_url = Printf.sprintf "/elfeed/content/%s" content_hash in
         (* Set src of IFrame *)
-        El.set_at At.Name.src (Some content_url) content_el ;
+        El.set_at At.Name.src (Some (Jstr.v content_url)) content_el ;
         (* Set reading mode *)
         Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
-        let link = Jv.get data "link" |> Jv.to_string in
-        let webid = Jv.get data "webid" |> Jv.to_string in
-        set_selected (Some {webid; link; entry= data}) ;
+        state.selected <- Some data.webid ;
         render_nav () )
       (El.as_target entry)
   in
   entry
 
+let update_app_state data =
+  let _entries =
+    data
+    |> Jv.to_list (fun e ->
+        let title = Jv.get e "title" |> Jv.to_string in
+        let feed_data = Jv.get e "feed" in
+        let feed_title = Jv.get feed_data "title" |> Jv.to_string in
+        let feed_url = Jv.get feed_data "url" |> Jv.to_string in
+        let feed = {title= feed_title; url= feed_url} in
+        let published_ms = Jv.get e "date" |> Jv.to_float in
+        let tags = Jv.get e "tags" |> Jv.to_list Jv.to_string in
+        let is_unread = List.exists (String.equal "unread") tags in
+        let webid = Jv.get e "webid" |> Jv.to_string in
+        let link = Jv.get e "link" |> Jv.to_string in
+        let content_hash = Jv.get e "content" |> Jv.to_string in
+        {webid; title; link; content_hash; feed; tags; is_unread; published_ms} )
+  in
+  let results = List.map (fun e -> e.webid) _entries in
+  List.iter (fun e -> Hashtbl.replace state.entries e.webid e) _entries ;
+  state.results <- results ;
+  ()
+
 let display_results response =
   let open Fut.Result_syntax in
   let headers = Fetch.Response.headers response in
   let* data = response |> Fetch.Response.as_body |> Fetch.Body.json in
-  let data_list = Jv.to_jv_list data in
-  last_entries := data_list ;
-  let children = data |> Jv.to_jv_list |> List.map make_entry in
+  update_app_state data ;
+  let children =
+    state.results
+    |> List.map (fun webid -> Hashtbl.find state.entries webid)
+    |> List.map make_entry
+  in
   let results_el = get_element_by_id_exn "results" in
   El.set_children results_el children ;
-  let n = data_list |> List.length in
+  let n = data |> Jv.to_jv_list |> List.length in
   let loaded = "loaded " ^ string_of_int n ^ " items" in
   let status =
     match Fetch.Headers.find (Jstr.of_string "X-Cache") headers with
@@ -251,10 +266,7 @@ let setup_handlers () =
   let form_el = get_element_by_id_exn "search-form" in
   let submit = Ev.Type.create (Jstr.v "submit") in
   Ev.listen submit
-    (fun e ->
-      Ev.prevent_default e ;
-      set_status "searching ..." ;
-      search () )
+    (fun e -> Ev.prevent_default e ; set_status "searching ..." ; search ())
     (El.as_target form_el)
   |> ignore ;
   (* Hook up offline btn click handler *)

@@ -2,14 +2,9 @@ open Brr
 open Util
 open Api
 module Clipboard = Brr_io.Clipboard
-
-type selection = {webid: string; link: string; entry: Jv.t}
-
-let selected = ref None
+open State
 
 let status_msg = ref ""
-
-let set_selected sel = selected := sel
 
 let set_button_enabled el enabled =
   let enabled_attr = if enabled then None else Some (Jstr.v "true") in
@@ -41,7 +36,7 @@ let render_nav () =
   let back_btn_el = get_element_by_id_exn "back" in
   let title_el = get_element_by_id_exn "nav-title" in
   let feed_el = get_element_by_id_exn "nav-feed" in
-  match !selected with
+  match state.selected with
   | None ->
       set_button_enabled mark_read_btn false ;
       set_button_enabled mark_unread_btn false ;
@@ -54,13 +49,12 @@ let render_nav () =
       set_button_enabled mark_unread_btn true ;
       set_button_enabled back_btn_el true ;
       set_button_enabled copy_url_btn true ;
-      let title = Jv.get s.entry "title" |> Jv.to_string in
+      let entry = Hashtbl.find state.entries s in
+      let title = entry.title in
       set_text title_el title ;
-      let feed =
-        Jv.get s.entry "feed" |> (fun x -> Jv.get x "title") |> Jv.to_string
-      in
+      let feed = entry.feed.title in
       set_text feed_el feed ;
-      set_open_original (Some (Jstr.v s.link))
+      set_open_original (Some (Jstr.v entry.link))
 
 let render_nav_status () =
   let status_el = get_element_by_id_exn "nav-status" in
@@ -108,7 +102,7 @@ let setup_nav_handlers () =
       Document.body G.document |> El.set_class (Jstr.of_string "reading") false ;
       let content_el = get_element_by_id_exn "content" in
       El.set_at At.Name.src (Some (Jstr.v "about:blank")) content_el ;
-      selected := None ;
+      state.selected <- None ;
       status_msg := "" ;
       render_nav () ;
       render_nav_status () )
@@ -118,25 +112,35 @@ let setup_nav_handlers () =
   let mark_read_btn_el = get_element_by_id_exn "mark-read" in
   Ev.listen Ev.click
     (fun _ ->
-      match !selected with None -> () | Some s -> mark_entry_as_read s.webid )
+      match state.selected with
+      | None ->
+          ()
+      | Some webid ->
+          mark_entry_as_read webid )
     (El.as_target mark_read_btn_el)
   |> ignore ;
   (* Hook up mark-as-unread handler *)
   let mark_unread_btn_el = get_element_by_id_exn "mark-unread" in
   Ev.listen Ev.click
     (fun _ ->
-      match !selected with None -> () | Some s -> mark_entry_as_unread s.webid )
+      match state.selected with
+      | None ->
+          ()
+      | Some webid ->
+          mark_entry_as_unread webid )
     (El.as_target mark_unread_btn_el)
   |> ignore ;
   (* Hook up copy-url handler *)
   let copy_url_btn_el = get_element_by_id_exn "copy-url" in
   Ev.listen Ev.click
     (fun _ ->
-      match !selected with
+      match state.selected with
       | None ->
           ()
-      | Some s ->
-          let link = Jv.get s.entry "link" |> Jv.to_string |> Jstr.v in
+      | Some webid ->
+          let link =
+            Hashtbl.find state.entries webid |> (fun x -> x.link) |> Jstr.v
+          in
           let clipboard = Clipboard.of_navigator G.navigator in
           Fut.await (Clipboard.write_text clipboard link) (fun result ->
               match result with
