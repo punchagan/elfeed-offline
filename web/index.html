@@ -10,172 +10,176 @@
   <body>
     <header>
       <h1>Elfeed Offline</h1>
-      <form id="search-form" action="#">
-        <input id="q" type="text" placeholder="@3-days-old or a query…" />
-        <button type="submit">Search</button>
-      </form>
-      <p id="status" class="muted">ready</p>
-      <button id="save-offline">Save top 30 offline</button>
-      <span id="prefetch-status" class="muted"></span>
     </header>
+    <section id="controls">
+      <search id="search-container">
+        <form id="search-form" action="#">
+          <input id="q" type="text" placeholder="@3-days-old or a query…" />
+          <button type="submit">Search</button>
+        </form>
+        <p id="status" class="muted">ready</p>
+        <button id="save-offline">Save top 30 offline</button>
+        <span id="prefetch-status" class="muted"></span>
+      </search>
+      <nav id="entry-meta">
+        <span id="nav-title"></span>
+        <span id="nav-feed"></span>
+        <div id="entry-nav">
+          <button id="back" class="back-btn" disabled>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-arrow-big-left-icon lucide-arrow-big-left"
+            >
+              <title>Back</title>
+              <path
+                d="M13 9a1 1 0 0 1-1-1V5.061a1 1 0 0 0-1.811-.75l-6.835 6.836a1.207 1.207 0 0 0 0 1.707l6.835 6.835a1 1 0 0 0 1.811-.75V16a1 1 0 0 1 1-1h6a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1z"
+              />
+            </svg>
+          </button>
+          <button id="mark-read" disabled>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-mail-open-icon lucide-mail-open"
+            >
+              <title>Mark as Read</title>
+              <path
+                d="M21.2 8.4c.5.38.8.97.8 1.6v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 .8-1.6l8-6a2 2 0 0 1 2.4 0l8 6Z"
+              />
+              <path d="m22 10-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 10" />
+            </svg>
+          </button>
+          <button id="mark-unread" disabled>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-mail-icon lucide-mail"
+            >
+              <title>Mark as Unread</title>
+              <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+            </svg>
+          </button>
+          <button id="star-entry" disabled>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-star-icon lucide-star"
+            >
+              <title>Star</title>
+              <path
+                d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"
+              />
+            </svg>
+          </button>
+          <button id="unstar-entry" disabled>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-star-off-icon lucide-star-off"
+            >
+              <title>Unstar</title>
+              <path
+                d="M8.34 8.34 2 9.27l5 4.87L5.82 21 12 17.77 18.18 21l-.59-3.43"
+              />
+              <path d="M18.42 12.76 22 9.27l-6.91-1L12 2l-1.44 2.91" />
+              <line x1="2" x2="22" y1="2" y2="22" />
+            </svg>
+          </button>
+
+          <button id="copy-url" disabled>
+            <title>Copy Original Link</title>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-clipboard-copy-icon lucide-clipboard-copy"
+            >
+              <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+              <path
+                d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+              />
+              <path d="M16 4h2a2 2 0 0 1 2 2v4" />
+              <path d="M21 14H11" />
+              <path d="m15 10-4 4 4 4" />
+            </svg>
+          </button>
+          <a
+            id="open-original"
+            class="button muted"
+            target="_blank"
+            rel="noopener"
+            title="Open Original Link"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-external-link-icon lucide-external-link open-original muted"
+            >
+              <title>Open Original Link</title>
+              <path d="M15 3h6v6" />
+              <path d="M10 14 21 3" />
+              <path
+                d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+              /></svg
+          ></a>
+        </div>
+        <p id="nav-status"></p>
+      </nav>
+    </section>
 
     <main>
       <aside id="results"></aside>
       <section id="reader">
         <iframe id="content"></iframe>
-        <div id="entry-meta">
-          <p id="nav-status"></p>
-          <span id="nav-title"></span>
-          <span id="nav-feed"></span>
-          <div id="entry-nav">
-            <button id="back" class="back-btn" disabled>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="lucide lucide-arrow-big-left-icon lucide-arrow-big-left"
-              >
-                <title>Back</title>
-                <path
-                  d="M13 9a1 1 0 0 1-1-1V5.061a1 1 0 0 0-1.811-.75l-6.835 6.836a1.207 1.207 0 0 0 0 1.707l6.835 6.835a1 1 0 0 0 1.811-.75V16a1 1 0 0 1 1-1h6a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1z"
-                />
-              </svg>
-            </button>
-            <button id="mark-read" disabled>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="lucide lucide-mail-open-icon lucide-mail-open"
-              >
-                <title>Mark as Read</title>
-                <path
-                  d="M21.2 8.4c.5.38.8.97.8 1.6v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 .8-1.6l8-6a2 2 0 0 1 2.4 0l8 6Z"
-                />
-                <path d="m22 10-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 10" />
-              </svg>
-            </button>
-            <button id="mark-unread" disabled>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="lucide lucide-mail-icon lucide-mail"
-              >
-                <title>Mark as Unread</title>
-                <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
-                <rect x="2" y="4" width="20" height="16" rx="2" />
-              </svg>
-            </button>
-            <button id="star-entry" disabled>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="lucide lucide-star-icon lucide-star"
-              >
-                <title>Star</title>
-                <path
-                  d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"
-                />
-              </svg>
-            </button>
-            <button id="unstar-entry" disabled>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="lucide lucide-star-off-icon lucide-star-off"
-              >
-                <title>Unstar</title>
-                <path
-                  d="M8.34 8.34 2 9.27l5 4.87L5.82 21 12 17.77 18.18 21l-.59-3.43"
-                />
-                <path d="M18.42 12.76 22 9.27l-6.91-1L12 2l-1.44 2.91" />
-                <line x1="2" x2="22" y1="2" y2="22" />
-              </svg>
-            </button>
-
-            <button id="copy-url" disabled>
-              <title>Copy Original Link</title>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="lucide lucide-clipboard-copy-icon lucide-clipboard-copy"
-              >
-                <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
-                <path
-                  d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
-                />
-                <path d="M16 4h2a2 2 0 0 1 2 2v4" />
-                <path d="M21 14H11" />
-                <path d="m15 10-4 4 4 4" />
-              </svg>
-            </button>
-            <a
-              id="open-original"
-              class="button muted"
-              target="_blank"
-              rel="noopener"
-              title="Open Original Link"
-              ><svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="lucide lucide-external-link-icon lucide-external-link open-original muted"
-              >
-                <title>Open Original Link</title>
-                <path d="M15 3h6v6" />
-                <path d="M10 14 21 3" />
-                <path
-                  d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
-                /></svg
-            ></a>
-          </div>
-        </div>
       </section>
     </main>
 

@@ -43,24 +43,15 @@ let render_nav () =
   let back_btn_el = get_element_by_id_exn "back" in
   let title_el = get_element_by_id_exn "nav-title" in
   let feed_el = get_element_by_id_exn "nav-feed" in
+  let entry_nav_el = get_element_by_id_exn "entry-nav" in
   match state.selected with
   | None ->
-      (* Read/Unread buttons *)
-      set_button_enabled mark_read_btn false ;
-      set_button_enabled mark_unread_btn false ;
-      set_button_visible mark_read_btn true ;
-      set_button_visible mark_unread_btn false ;
-      (* Star/Unstar buttons *)
-      set_button_enabled star_btn false ;
-      set_button_enabled unstar_btn false ;
-      set_button_visible star_btn true ;
-      set_button_visible unstar_btn false ;
-      (* Other buttons *)
-      set_button_enabled back_btn_el false ;
-      set_button_enabled copy_url_btn false ;
+      (* Hide the entry-nav section *)
+      set_button_visible entry_nav_el false ;
       set_text title_el "" ;
-      set_open_original None
+      set_text feed_el ""
   | Some s ->
+      set_button_visible entry_nav_el true ;
       (* Read/Unread buttons *)
       set_button_enabled mark_read_btn true ;
       set_button_enabled mark_unread_btn true ;

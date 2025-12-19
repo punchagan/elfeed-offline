@@ -1,5 +1,6 @@
 :root {
     color-scheme: light dark;
+    --top-section-height: 200px;
 }
 * {
     box-sizing: border-box;
@@ -14,29 +15,44 @@ body {
         sans-serif;
 }
 header {
-    padding: 12px 16px;
+    padding: 0.5em;
     border-bottom: 1px solid #ccc;
-    height: 160px;
+    max-width: 90%;
+    margin: 0 auto;
+    text-align: center;
 }
 header h1 {
-    margin: 0 0 8px 0;
+    margin: 0;
     font-size: 18px;
 }
-header form {
+search {
+    padding: 1em;
+    border-right: 1px solid #ccc;
+    height: 160px;
+    align-content: center;
+}
+search form {
     display: flex;
     gap: 8px;
 }
-header input {
+search input {
     flex: 1;
+}
+#controls {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    align-items: center;
+    border-bottom: 1px solid #ccc;
 }
 main {
     display: grid;
     grid-template-columns: 420px 1fr;
-    height: calc(100vh - 165px);
+    height: calc(100vh - var(--top-section-height));
 }
 #results {
-    overflow: auto;
+    overflow: scroll;
     border-right: 1px solid #ccc;
+    height: calc(100vh - var(--top-section-height));
 }
 #reader {
     height: auto;
@@ -44,8 +60,9 @@ main {
     flex-direction: column;
 }
 #entry-meta {
-    border-top: 1px solid #ccc;
-    padding: 12px 16px;
+    padding: 1em;
+    height: 160px;
+    width: 100%;
 }
 #entry-nav {
     display: flex;
@@ -54,6 +71,8 @@ main {
 }
 #nav-status {
     font-size: 12px;
+    margin: 1em 0 0 0;
+    height: 1em;
 }
 #nav-status.empty {
     opacity: 0;
@@ -143,14 +162,26 @@ button,
 @media (max-width: 800px) {
     main {
         grid-template-columns: 1fr;
-        height: calc(100vh - 150px);
+        height: calc(100vh - var(--top-section-height));
+    }
+    #controls {
+        grid-template-columns: 1fr;
     }
     body #reader {
         display: none;
     }
+    body #entry-meta {
+        display: none;
+    }
+    body.reading #entry-meta {
+        display: block;
+    }
+    body.reading search {
+        display: none;
+    }
     body.reading #reader {
         display: block;
-        height: calc(100vh - 150px);
+        height: calc(100vh - var(--top-section-height));
     }
     body.reading #results {
         display: none;
