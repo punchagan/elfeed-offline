@@ -6,11 +6,6 @@ open Util
 open Nav
 open State
 
-let set_status_prefetch msg =
-  let el = get_element_by_id_exn "prefetch-status" in
-  let text_node = El.txt (Jstr.v msg) in
-  El.set_children el [text_node]
-
 let get_query () =
   let q_el = get_element_by_id_exn "q" in
   El.prop El.Prop.value q_el |> Jstr.trim
@@ -37,9 +32,9 @@ let prefetch_top_n ?(n = 30) _click_evt =
       Brr_webworkers.Worker.post worker
         (Jv.obj
            [|("type", Jv.of_string "PREFETCH"); ("ids", ids |> Jv.of_jv_list)|] ) ;
-      set_status_prefetch (Printf.sprintf "Starting… 0/%d" (List.length ids))
+      set_status (Printf.sprintf "Starting… 0/%d" (List.length ids))
   | None ->
-      set_status_prefetch "No service worker found."
+      set_status "No service worker found."
 
 let search_add_remove_tag evt =
   Ev.prevent_default evt ;
@@ -257,13 +252,13 @@ let on_message e =
   | "PREFETCH_PROGRESS" ->
       let done_ = Jv.to_int (Jv.get data "done") in
       let total = Jv.to_int (Jv.get data "total") in
-      set_status_prefetch (Printf.sprintf "Saving… %d/%d" done_ total)
+      set_status (Printf.sprintf "Saving… %d/%d" done_ total)
   | "PREFETCH_DONE" ->
       let total = Jv.to_int (Jv.get data "total") in
-      set_status_prefetch (Printf.sprintf "Saved %d items." total)
+      set_status (Printf.sprintf "Saved %d items." total)
   | "PREFETCH_STOP" ->
       let reason = Jv.to_string (Jv.get data "reason") in
-      set_status_prefetch (Printf.sprintf "Stopped: %s" reason)
+      set_status (Printf.sprintf "Stopped: %s" reason)
   | _ ->
       ()
 
@@ -293,7 +288,7 @@ let setup_handlers () =
   | _ ->
       ()
   | exception Jv.Error _ ->
-      set_status_prefetch "Failed to setup service worker!"
+      set_status "Failed to setup service worker!"
 
 let () =
   setup_handlers () ;
