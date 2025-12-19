@@ -140,8 +140,9 @@ let make_entry (data : entry) =
 
 let update_app_state data =
   let _entries =
-    data
-    |> Jv.to_list (fun e ->
+    data |> Jv.to_jv_list
+    |> List.filter (Jv.has "content")
+    |> List.map (fun e ->
         let title = Jv.get e "title" |> Jv.to_string in
         let feed_data = Jv.get e "feed" in
         let feed_title = Jv.get feed_data "title" |> Jv.to_string in
