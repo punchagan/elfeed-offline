@@ -7,20 +7,23 @@ let is_content_uri uri =
 
 let wrapped_html html =
   Printf.sprintf
-    "<!doctype html>\n\
-     <html>\n\
-     <head>\n\
-     <style type='text/css'>\n\
-     :root {\n\
-    \   color-scheme: light dark;\n\
-     }\n\
-     </style>\n\
-     <meta charset='utf-8' />\n\
-     <base target='_blank' /></head>\n\
-     <body>\n\
-     %s\n\
-     </body>\n\
-     </html>"
+    {|
+<!doctype html>
+<html>
+    <head>
+        <style type='text/css'>
+        :root {
+            color-scheme: light dark;
+        }
+        </style>
+        <meta charset='utf-8' />
+        <base target='_blank' />
+    </head>
+    <body>
+        %s
+    </body>
+</html>
+|}
     html
 
 let forward (req : Dream.request) meth =
