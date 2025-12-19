@@ -15,6 +15,11 @@ let wrapped_html html =
         :root {
             color-scheme: light dark;
         }
+        img {
+            max-width: 100%%;
+            height: auto;
+            object-fit: contain;
+        }
         </style>
         <meta charset='utf-8' />
         <base target='_blank' />
