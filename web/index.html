@@ -11,37 +11,65 @@
     <header>
       <h1>Elfeed Offline</h1>
     </header>
-    <section id="controls">
+    <section id="entry-controls">
       <search id="search-container">
         <form id="search-form" action="#">
           <input id="q" type="text" placeholder="@3-days-old or a query…" />
           <button type="submit">Search</button>
         </form>
         <p id="status" class="muted">ready</p>
-        <button id="save-offline">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="lucide lucide-database-zap-icon lucide-database-zap"
-          >
-            <title>Save to Offline Database</title>
-            <ellipse cx="12" cy="5" rx="9" ry="3" />
-            <path d="M3 5V19A9 3 0 0 0 15 21.84" />
-            <path d="M21 5V8" />
-            <!-- replaced the zap with a down arrow -->
-            <path d="M21 13v8l-4-4" />
-            <path d="m21 21 4-4" />
-            <!-- <path d="M21 12L18 17H22L19 22" /> -->
-            <path d="M3 12A9 3 0 0 0 14.59 14.87" />
-          </svg>
-        </button>
+        <div id="controls">
+          <button id="save-offline">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-database-zap-icon lucide-database-zap"
+            >
+              <title>Save to Offline Database</title>
+              <ellipse cx="12" cy="5" rx="9" ry="3" />
+              <path d="M3 5V19A9 3 0 0 0 15 21.84" />
+              <path d="M21 5V8" />
+              <!-- replaced the zap with a down arrow -->
+              <path d="M21 13v8l-4-4" />
+              <path d="m21 21 4-4" />
+              <!-- <path d="M21 12L18 17H22L19 22" /> -->
+              <path d="M3 12A9 3 0 0 0 14.59 14.87" />
+            </svg>
+          </button>
+          <button id="mark-all-read">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-mails-icon lucide-mails"
+            >
+              <title>Mark All as Read</title>
+              <path
+                d="M17 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 1-1.732"
+              />
+              <!-- Change path to an open envelope -->
+              <g transform="matrix(0.75 0 0 0.75 4 0.2)" stroke-width="2.5">
+                <path
+                  d="M21.2 8.4c.5.38.8.97.8 1.6v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 .8-1.6l8-6a2 2 0 0 1 2.4 0l8 6Z"
+                />
+                <path d="m22 10-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 10" />
+              </g>
+            </svg>
+          </button>
+        </div>
       </search>
       <nav id="entry-meta">
         <span id="nav-title"></span>

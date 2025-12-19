@@ -263,6 +263,45 @@ let on_message e =
   | _ ->
       ()
 
+let mark_all_as_read _ =
+  let data =
+    Jv.obj
+      [| ("entries", state.results |> Jv.of_list Jv.of_string)
+       ; ("remove", [Jstr.of_string "unread"] |> Jv.of_jstr_list) |]
+  in
+  Api.update_tag_data data
+    (fun status ->
+      if status = 202 then
+        set_status (Printf.sprintf "Tags will be updated when online")
+      else search () )
+    (fun () -> set_status "Failed to mark all as read!")
+
+let confirm_mark_all_as_read evt =
+  Ev.prevent_default evt ;
+  Ev.stop_propagation evt ;
+  let confirm = Jv.get Jv.global "confirm" in
+  let prompt = Jv.get Jv.global "prompt" in
+  match List.length state.results with
+  | 0 ->
+      set_status "No entries to mark as read."
+  | n when n < 10 ->
+      let msg = Printf.sprintf "Mark all %d entries as read?" n in
+      let ok =
+        Jv.call confirm "call" [|Jv.undefined; Jv.of_string msg|] |> Jv.to_bool
+      in
+      if ok then mark_all_as_read () else ()
+  | n ->
+      let msg =
+        Printf.sprintf
+          "Mark all entries %d as read? Type READ-%d below to confirm." n n
+      in
+      let user_input =
+        Jv.call prompt "call" [|Jv.undefined; Jv.of_string msg|] |> Jv.to_string
+      in
+      let expected_input = Printf.sprintf "READ-%d" n in
+      if String.equal user_input expected_input then mark_all_as_read ()
+      else set_status "Mark all as read cancelled."
+
 let setup_handlers () =
   (* Hook up search-form submit event handler *)
   let form_el = get_element_by_id_exn "search-form" in
@@ -271,10 +310,15 @@ let setup_handlers () =
     (fun e -> Ev.prevent_default e ; set_status "searching ..." ; search ())
     (El.as_target form_el)
   |> ignore ;
-  (* Hook up offline btn click handler *)
+  (* Hook up save-offline btn click handler *)
   let n = 100 in
   let offline_btn_el = get_element_by_id_exn "save-offline" in
   Ev.listen Ev.click (prefetch_top_n ~n) (El.as_target offline_btn_el) |> ignore ;
+  (* Hook up mark-all-read btn click handler *)
+  let mark_all_read_btn_el = get_element_by_id_exn "mark-all-read" in
+  Ev.listen Ev.click confirm_mark_all_as_read
+    (El.as_target mark_all_read_btn_el)
+  |> ignore ;
   (* Hook up handlers for nav buttons *)
   setup_nav_handlers () ;
   (* Hook up message listener  *)
