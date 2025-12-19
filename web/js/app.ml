@@ -60,7 +60,7 @@ let add_tag_to_search evt =
   El.set_prop El.Prop.value new_q q_el ;
   submit_search_form ()
 
-let add_feed_url_to_search evt =
+let search_add_remove_feed_url evt =
   Ev.prevent_default evt ;
   Ev.stop_propagation evt ;
   let target = Ev.target evt in
@@ -73,17 +73,30 @@ let add_feed_url_to_search evt =
   | None ->
       ()
   | Some feed_title ->
-      let tag_text = Printf.sprintf "=%s" feed_title |> Jstr.of_string in
+      let search_text = Printf.sprintf "=%s" feed_title |> Jstr.v in
       let q_el = get_element_by_id_exn "q" in
       let current_q = El.prop El.Prop.value q_el in
-      if Jstr.find_sub ~sub:tag_text current_q <> None then ()
-      else
-        let new_q =
-          if Jstr.is_empty current_q then tag_text
-          else Jstr.append current_q (Jstr.append (Jstr.of_string " ") tag_text)
-        in
-        El.set_prop El.Prop.value new_q q_el ;
-        submit_search_form ()
+      let new_q =
+        match Jstr.find_sub ~sub:search_text current_q with
+        | Some pos ->
+            (* Remove feed from search query *)
+            let n = Jstr.length search_text in
+            let before = Jstr.sub ~start:0 ~len:pos current_q in
+            let after =
+              Jstr.sub ~start:(pos + n)
+                ~len:(Jstr.length current_q - pos - n)
+                current_q
+            in
+            Jstr.append before after
+        | None ->
+            (* Add feed to search query *)
+            if Jstr.is_empty current_q then search_text
+            else
+              Jstr.append current_q
+                (Jstr.append (Jstr.of_string " ") search_text)
+      in
+      El.set_prop El.Prop.value new_q q_el ;
+      submit_search_form ()
 
 let make_entry (data : entry) =
   let title_el =
@@ -99,7 +112,7 @@ let make_entry (data : entry) =
       [data.feed.title |> Jstr.v |> El.txt]
   in
   El.set_at (Jstr.of_string "data-url") (Some (Jstr.v data.feed.url)) feed_el ;
-  Ev.listen Ev.click add_feed_url_to_search (El.as_target feed_el) |> ignore ;
+  Ev.listen Ev.click search_add_remove_feed_url (El.as_target feed_el) |> ignore ;
   let date = format_date data.published_ms in
   let date_el =
     El.v
