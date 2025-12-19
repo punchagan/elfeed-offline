@@ -273,10 +273,6 @@ let setup_handlers () =
   (* Hook up offline btn click handler *)
   let n = 100 in
   let offline_btn_el = get_element_by_id_exn "save-offline" in
-  let text_node =
-    n |> Printf.sprintf "Save top %d offline" |> Jstr.of_string |> El.txt
-  in
-  El.set_children offline_btn_el [text_node] ;
   Ev.listen Ev.click (prefetch_top_n ~n) (El.as_target offline_btn_el) |> ignore ;
   (* Hook up handlers for nav buttons *)
   setup_nav_handlers () ;
