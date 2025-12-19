@@ -1,5 +1,18 @@
 open Brr
 
+let add_or_remove_substring s sub =
+  match Jstr.find_sub ~sub s with
+  | Some pos ->
+      (* Remove sub from s *)
+      let n = Jstr.length sub in
+      let before = Jstr.sub ~start:0 ~len:pos s in
+      let after = Jstr.sub ~start:(pos + n) ~len:(Jstr.length s - pos - n) s in
+      Jstr.append before after
+  | None ->
+      (* Add sub to s *)
+      if Jstr.is_empty s then sub
+      else Jstr.append (Jstr.trim s) (Jstr.append (Jstr.of_string " ") sub)
+
 let get_element_by_id_exn id =
   match id |> Jstr.of_string |> Document.find_el_by_id G.document with
   | Some el ->

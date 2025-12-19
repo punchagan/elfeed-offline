@@ -41,7 +41,7 @@ let prefetch_top_n ?(n = 30) _click_evt =
   | None ->
       set_status_prefetch "No service worker found."
 
-let add_tag_to_search evt =
+let search_add_remove_tag evt =
   Ev.prevent_default evt ;
   Ev.stop_propagation evt ;
   let target = Ev.target evt in
@@ -52,11 +52,7 @@ let add_tag_to_search evt =
   let tag_text = String.cat "+" tag_text |> Jstr.of_string in
   let q_el = get_element_by_id_exn "q" in
   let current_q = El.prop El.Prop.value q_el in
-  let new_q =
-    if Jstr.is_empty current_q then tag_text
-    else if Jstr.find_sub ~sub:tag_text current_q <> None then current_q
-    else Jstr.append current_q (Jstr.append (Jstr.of_string " ") tag_text)
-  in
+  let new_q = add_or_remove_substring current_q tag_text in
   El.set_prop El.Prop.value new_q q_el ;
   submit_search_form ()
 
@@ -76,25 +72,7 @@ let search_add_remove_feed_url evt =
       let search_text = Printf.sprintf "=%s" feed_title |> Jstr.v in
       let q_el = get_element_by_id_exn "q" in
       let current_q = El.prop El.Prop.value q_el in
-      let new_q =
-        match Jstr.find_sub ~sub:search_text current_q with
-        | Some pos ->
-            (* Remove feed from search query *)
-            let n = Jstr.length search_text in
-            let before = Jstr.sub ~start:0 ~len:pos current_q in
-            let after =
-              Jstr.sub ~start:(pos + n)
-                ~len:(Jstr.length current_q - pos - n)
-                current_q
-            in
-            Jstr.append before after
-        | None ->
-            (* Add feed to search query *)
-            if Jstr.is_empty current_q then search_text
-            else
-              Jstr.append current_q
-                (Jstr.append (Jstr.of_string " ") search_text)
-      in
+      let new_q = add_or_remove_substring current_q search_text in
       El.set_prop El.Prop.value new_q q_el ;
       submit_search_form ()
 
@@ -135,7 +113,7 @@ let make_entry (data : entry) =
     (* Click handler for tags *)
     List.iter
       (fun tag_el ->
-        Ev.listen Ev.click add_tag_to_search (El.as_target tag_el) |> ignore )
+        Ev.listen Ev.click search_add_remove_tag (El.as_target tag_el) |> ignore )
       chips ;
     El.v
       ~at:[At.v At.Name.class' (Jstr.of_string "tags")]
