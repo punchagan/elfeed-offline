@@ -38,7 +38,7 @@ search form {
 search input {
     flex: 1;
 }
-#entry-controls {
+#reader-controls {
     display: grid;
     grid-template-columns: 420px 1fr;
     align-items: center;
@@ -164,7 +164,7 @@ button,
         grid-template-columns: 1fr;
         height: calc(100vh - var(--top-section-height));
     }
-    #entry-controls {
+    #reader-controls {
         grid-template-columns: 1fr;
     }
     body #reader {
