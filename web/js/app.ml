@@ -55,12 +55,12 @@ let search_add_remove_feed_url evt =
   Ev.prevent_default evt ;
   Ev.stop_propagation evt ;
   let target = Ev.target evt in
-  let feed_title =
+  let feed_url =
     Ev.target_to_jv target |> El.of_jv
     |> El.at (Jstr.of_string "data-url")
     |> Option.map Jstr.to_string
   in
-  match feed_title with
+  match feed_url with
   | None ->
       ()
   | Some feed_title ->
@@ -84,7 +84,14 @@ let make_entry (data : entry) =
       (Jstr.of_string "span")
       [data.feed.title |> Jstr.v |> El.txt]
   in
-  El.set_at (Jstr.of_string "data-url") (Some (Jstr.v data.feed.url)) feed_el ;
+  let feed_hostname =
+    match data.feed.url |> Jstr.v |> Uri.of_jstr with
+    | Ok uri ->
+        Some (Uri.host uri)
+    | Error _ ->
+        None
+  in
+  El.set_at (Jstr.of_string "data-url") feed_hostname feed_el ;
   Ev.listen Ev.click search_add_remove_feed_url (El.as_target feed_el) |> ignore ;
   let date = format_date data.published_ms in
   let date_el =
