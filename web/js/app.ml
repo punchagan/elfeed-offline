@@ -317,6 +317,14 @@ let search_add_remove_starred evt =
   El.set_prop El.Prop.value new_q q_el ;
   search ()
 
+let search_add_remove_unread evt =
+  let q_el = get_element_by_id_exn "q" in
+  let current_q = El.prop El.Prop.value q_el in
+  let text = Jstr.v "+unread" in
+  let new_q = add_or_remove_substring current_q text in
+  El.set_prop El.Prop.value new_q q_el ;
+  search ()
+
 let setup_handlers () =
   (* Hook up search-form submit event handler *)
   let form_el = get_element_by_id_exn "search-form" in
@@ -338,6 +346,11 @@ let setup_handlers () =
   let toggle_starred_btn_el = get_element_by_id_exn "toggle-starred" in
   Ev.listen Ev.click search_add_remove_starred
     (El.as_target toggle_starred_btn_el)
+  |> ignore ;
+  (* Hook up toggle-unread btn click handler *)
+  let toggle_unread_btn_el = get_element_by_id_exn "toggle-unread" in
+  Ev.listen Ev.click search_add_remove_unread
+    (El.as_target toggle_unread_btn_el)
   |> ignore ;
   (* Hook up handlers for nav buttons *)
   setup_nav_handlers () ;
