@@ -120,11 +120,37 @@ main {
 .date {
     font-size: 12px;
     opacity: 0.7;
-    float: right;
 }
 .muted {
     opacity: 0.7;
     font-size: 12px;
+}
+.entry-controls {
+    float: right;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-wrap: nowrap;
+}
+.star {
+    padding: 0px;
+    display: inline-block;
+    cursor: pointer;
+    opacity: 0.7;
+    background: none;
+    /* border: none; */
+}
+.unstarred svg {
+    fill: none;
+}
+.starred {
+    color: gold;
+    opacity: 0.7;
+}
+.star svg {
+    width: 16px;
+    height: 16px;
+    margin: 5px;
 }
 
 button,

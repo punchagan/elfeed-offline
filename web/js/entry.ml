@@ -94,13 +94,27 @@ let make_entry (data : entry) =
       ~at:[At.v At.Name.class' (Jstr.of_string "tags")]
       (Jstr.of_string "div") chips
   in
+  let star_btn_el = Icons.star_button_el data in
+  Ev.listen Ev.click
+    (fun e ->
+      Ev.prevent_default e ;
+      Ev.stop_propagation e ;
+      if data.is_starred then Nav.unstar_entry data.webid
+      else Nav.star_entry data.webid )
+    (El.as_target star_btn_el)
+  |> ignore ;
+  let controls_el =
+    El.v
+      ~at:[At.v At.Name.class' (Jstr.of_string "entry-controls")]
+      (Jstr.of_string "div") [date_el; star_btn_el]
+  in
   let entry =
     El.v
       ~at:
         [ "entry" |> Jstr.v |> At.class'
         ; (if data.is_unread then "unread" else "") |> Jstr.v |> At.class' ]
       (Jstr.of_string "div")
-      [date_el; title_el; feed_el; tags_el]
+      [controls_el; title_el; feed_el; tags_el]
   in
   let _ =
     Ev.listen Ev.click
