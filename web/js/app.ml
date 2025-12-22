@@ -309,6 +309,14 @@ let confirm_mark_all_as_read evt =
       if String.equal user_input expected_input then mark_all_as_read ()
       else set_status "Mark all as read cancelled."
 
+let search_add_remove_starred evt =
+  let q_el = get_element_by_id_exn "q" in
+  let current_q = El.prop El.Prop.value q_el in
+  let text = Jstr.v "+starred" in
+  let new_q = add_or_remove_substring current_q text in
+  El.set_prop El.Prop.value new_q q_el ;
+  search ()
+
 let setup_handlers () =
   (* Hook up search-form submit event handler *)
   let form_el = get_element_by_id_exn "search-form" in
@@ -325,6 +333,11 @@ let setup_handlers () =
   let mark_all_read_btn_el = get_element_by_id_exn "mark-all-read" in
   Ev.listen Ev.click confirm_mark_all_as_read
     (El.as_target mark_all_read_btn_el)
+  |> ignore ;
+  (* Hook up toggle-starred btn click handler *)
+  let toggle_starred_btn_el = get_element_by_id_exn "toggle-starred" in
+  Ev.listen Ev.click search_add_remove_starred
+    (El.as_target toggle_starred_btn_el)
   |> ignore ;
   (* Hook up handlers for nav buttons *)
   setup_nav_handlers () ;
