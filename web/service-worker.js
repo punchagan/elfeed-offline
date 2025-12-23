@@ -109,7 +109,7 @@ const getHandler = async (e) => {
             return withHeader(
               await patchSearchResponse(cachedSearch),
               "X-Cache",
-              "NEAR",
+              "OFFLINE-SEARCH",
             );
           } else {
             return new Response("{}", {

@@ -30,7 +30,7 @@ let prefetch_top_n ?(n = 30) _click_evt =
   | None ->
       set_status "No service worker found."
 
-let update_app_state data =
+let update_app_state ~cached data =
   let _entries =
     data |> Jv.to_jv_list
     |> List.filter (Jv.has "content")
@@ -57,16 +57,29 @@ let update_app_state data =
         ; is_starred
         ; published_ms } )
   in
-  let results = List.map (fun e -> e.webid) _entries in
   List.iter (fun e -> Hashtbl.replace state.entries e.webid e) _entries ;
-  state.results <- results ;
-  ()
+  let q_el = get_element_by_id_exn "q" in
+  let query = El.prop El.Prop.value q_el |> Jstr.to_string in
+  let results =
+    (if cached then Offline_search.filter_results ~query _entries else _entries)
+    |> List.map (fun e -> e.webid)
+  in
+  state.results <- results
 
 let display_results response =
   let open Fut.Result_syntax in
   let headers = Fetch.Response.headers response in
   let* data = response |> Fetch.Response.as_body |> Fetch.Body.json in
-  update_app_state data ;
+  let cache_header =
+    Fetch.Headers.find (Jstr.of_string "X-Cache") headers
+    |> Option.map Jstr.to_string
+  in
+  let cached =
+    cache_header
+    |> Option.map (( = ) "OFFLINE-SEARCH")
+    |> Option.value ~default:false
+  in
+  update_app_state ~cached data ;
   ( match state.selected with
   | Some webid ->
       if not (List.mem webid state.results) then close_entry ()
@@ -83,16 +96,16 @@ let display_results response =
   let n = data |> Jv.to_jv_list |> List.length in
   let loaded = "loaded " ^ string_of_int n ^ " items" in
   let status =
-    match Fetch.Headers.find (Jstr.of_string "X-Cache") headers with
+    match cache_header with
     | Some t ->
         let suffix =
-          match Jstr.to_string t with
+          match t with
           | "HIT" ->
               " (from cache)"
           | "HIT-X" ->
               " (from cache; Emacs elfeed server offline)"
-          | "NEAR" ->
-              " (from latest cached search)"
+          | "OFFLINE-SEARCH" ->
+              " (from offline-search-cache)"
           | _ ->
               " (from unknown cached entry)"
         in

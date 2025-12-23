@@ -30,7 +30,18 @@
  (synopsis "Offline-first Elfeed (proxy) server with PWA")
  (description
   "Dream-based proxy + offline PWA, caches entries and syncs tags.")
- (depends ocaml dream cohttp cohttp-lwt-unix lwt brr uri uri-sexp)
+ (depends
+  ocaml
+  dream
+  cohttp
+  cohttp-lwt-unix
+  lwt
+  brr
+  uri
+  uri-sexp
+  (alcotest :with-test)
+  ptime
+  astring)
  (tags
   ("elfeed" "rss" "feeds" "PWA" "offline" "proxy" "dream")))
 

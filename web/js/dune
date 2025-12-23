@@ -13,5 +13,5 @@
 
 (library
  (name elfeed_offline_web)
- (modules state util entry icons nav api util)
- (libraries brr))
+ (modules offline_search state util entry icons nav api util)
+ (libraries brr astring str ptime ptime.clock uri))
