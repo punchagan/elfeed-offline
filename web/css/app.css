@@ -132,13 +132,15 @@ main {
     gap: 4px;
     flex-wrap: nowrap;
 }
-.star {
+.star,
+.unread-btn,
+.read-btn {
     padding: 0px;
     display: inline-block;
     cursor: pointer;
     opacity: 0.7;
     background: none;
-    /* border: none; */
+    border: none;
 }
 .unstarred svg {
     fill: none;
@@ -161,6 +163,12 @@ button,
     border: 1px solid #ccc;
     border-radius: 4px;
 }
+.unread-btn svg,
+.read-btn svg {
+    width: 16px;
+    height: 16px;
+    margin: 5px;
+}
 
 /* Tags */
 .entry .tags {
@@ -182,6 +190,9 @@ button,
 .entry .tag:is(:hover, :focus-visible) {
     filter: contrast(1.15);
     outline: none;
+}
+.entry-controls {
+    margin-left: 8px;
 }
 
 /* Full-screen reader when body.reading is set */

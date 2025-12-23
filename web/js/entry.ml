@@ -103,10 +103,25 @@ let make_entry (data : entry) =
       else Nav.star_entry data.webid )
     (El.as_target star_btn_el)
   |> ignore ;
+  let read_unread_btn_el = Icons.read_unread_el data in
+  Ev.listen Ev.click
+    (fun e ->
+      Ev.prevent_default e ;
+      Ev.stop_propagation e ;
+      if data.is_unread then Nav.mark_entry_as_read data.webid
+      else Nav.mark_entry_as_unread data.webid )
+    (El.as_target read_unread_btn_el)
+  |> ignore ;
+  let icon_span =
+    El.v
+      ~at:[At.v At.Name.class' (Jstr.of_string "icon-span")]
+      (Jstr.of_string "span")
+      [star_btn_el; read_unread_btn_el]
+  in
   let controls_el =
     El.v
       ~at:[At.v At.Name.class' (Jstr.of_string "entry-controls")]
-      (Jstr.of_string "div") [date_el; star_btn_el]
+      (Jstr.of_string "div") [date_el; icon_span]
   in
   let entry =
     El.v
