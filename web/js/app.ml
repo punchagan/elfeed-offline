@@ -148,6 +148,13 @@ let on_message e =
   | "PREFETCH_DONE" ->
       let total = Jv.to_int (Jv.get data "total") in
       set_status (Printf.sprintf "Saved %d items." total)
+  | "PREFETCH_SEARCH_DONE" ->
+      set_status
+        (Printf.sprintf "Prefetched search query data for offline search")
+  | "PREFETCH_SEARCH_FAILED" ->
+      set_status
+        (Printf.sprintf
+           "Failed to prefetch search query data for offline search" )
   | "PREFETCH_STOP" ->
       let reason = Jv.to_string (Jv.get data "reason") in
       set_status (Printf.sprintf "Stopped: %s" reason)

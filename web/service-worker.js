@@ -11,6 +11,7 @@ const META = "meta-v1";
 const PREFETCH_CONCURRENCY = 4;
 const PREFETCH_MAX_BYTES = 40 * 1024 * 1024; // soft cap (~40 MB)
 const OFFLINE_TAGS_URL = "http://sw.offline/elfeed/offline-tags";
+const OFFLINE_SEARCH_PARAM = "@999-days-old";
 
 const withHeader = (resp, key, value) => {
   const headers = new Headers(resp.headers);
@@ -35,6 +36,12 @@ const withLock = (key, fn) => {
   );
   return next;
 };
+
+const offlineSearchUrl = () =>
+  new URL(
+    `/elfeed/search?q=${encodeURIComponent(OFFLINE_SEARCH_PARAM)}`,
+    self.location.origin,
+  ).toString();
 
 const getHandler = async (e) => {
   const url = new URL(e.request.url);
@@ -92,11 +99,11 @@ const getHandler = async (e) => {
             status: 200,
             headers: { "content-type": "text/html; charset=utf-8" },
           });
-        }
-        // Try to find any cached search requests, if possible
-        else if (url.pathname === "/elfeed/search") {
+        } else if (url.pathname === "/elfeed/search") {
+          // Try to find the OFFLINE_SEARCH_PARAM cached search
           const keys = (await cache.keys()).reverse();
-          const req = keys.find((req) => req.url.includes("/elfeed/search"));
+          const target = offlineSearchUrl();
+          const req = keys.find((k) => k.url.includes(target));
           if (req) {
             const cachedSearch = await cache.match(req);
             return withHeader(
@@ -301,6 +308,38 @@ const bytesUsed = async (cacheName) => {
   return total;
 };
 
+const prefetchSearch = async () => {
+  const url = offlineSearchUrl();
+
+  try {
+    // Prefer an explicit fetch so failures are clear
+    const resp = await fetch(url, { credentials: "same-origin" });
+    if (!resp.ok) return false;
+    const cache = await caches.open(C_CONTENT);
+    await cache.put(url, resp.clone());
+    notifyAll({ type: "PREFETCH_SEARCH_DONE" });
+    return true;
+  } catch (err) {
+    console.log("Prefetch search failed:", err);
+    notifyAll({ type: "PREFETCH_SEARCH_FAILED" });
+    return false;
+  }
+};
+
+const clearStaleSearchCaches = async () => {
+  const cache = await caches.open(C_CONTENT);
+  const keys = await cache.keys();
+  const target = offlineSearchUrl();
+
+  // Only delete other /elfeed/search entries, keep the offline one.
+  // TODO: Is this too aggressive?
+  const toDelete = keys.filter(
+    (req) => req.url.includes("/elfeed/search") && req.url !== target,
+  );
+
+  await Promise.all(toDelete.map((req) => cache.delete(req)));
+};
+
 const prefetchIds = async (hashes) => {
   const cache = await caches.open(C_CONTENT);
   const q = hashes.slice();
@@ -395,7 +434,32 @@ self.addEventListener("fetch", (e) => {
 
 self.addEventListener("message", (e) => {
   const msg = e.data || {};
-  if (msg.type === "PREFETCH" && Array.isArray(msg.content_hashes)) {
-    e.waitUntil(prefetchIds(msg.content_hashes));
-  }
+  if (!(msg.type === "PREFETCH" && Array.isArray(msg.content_hashes))) return;
+
+  e.waitUntil(
+    (async () => {
+      const ok = await prefetchSearch();
+      if (!ok) {
+        // Don’t do anything else, if prefetch failed.
+        return;
+      }
+
+      // Prefetch succeeded, now ok to clear stale search caches.
+      await clearStaleSearchCaches();
+
+      const cache = await caches.open(C_CONTENT);
+      const resp = await cache.match(offlineSearchUrl());
+      if (!resp) {
+        // Extremely unlikely after ok=true, but just a fallback.
+        await prefetchIds(msg.content_hashes);
+        return;
+      }
+
+      const data = await resp.json();
+      const hashes = Array.isArray(data)
+        ? data.filter((entry) => !!entry.content).map((entry) => entry.content)
+        : msg.content_hashes;
+      await prefetchIds(hashes);
+    })(),
+  );
 });
