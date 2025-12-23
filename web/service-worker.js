@@ -10,6 +10,7 @@ const C_CONTENT = "content-v1";
 const META = "meta-v1";
 const PREFETCH_CONCURRENCY = 4;
 const PREFETCH_MAX_BYTES = 40 * 1024 * 1024; // soft cap (~40 MB)
+const OFFLINE_TAGS_URL = "http://sw.offline/elfeed/offline-tags";
 
 const withHeader = (resp, key, value) => {
   const headers = new Headers(resp.headers);
@@ -35,26 +36,6 @@ const withLock = (key, fn) => {
   return next;
 };
 
-self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(C_SHELL).then((c) => c.addAll(SHELL)));
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((k) => ![C_SHELL, C_CONTENT].includes(k))
-            .map((k) => caches.delete(k)),
-        ),
-      ),
-  );
-  self.clients.claim();
-});
-
 const getHandler = async (e) => {
   const url = new URL(e.request.url);
   if (SHELL.includes(url.pathname)) {
@@ -78,7 +59,7 @@ const getHandler = async (e) => {
   ) {
     e.respondWith(
       (async () => {
-        const cache = await caches.open("content-v1");
+        const cache = await caches.open(C_CONTENT);
         let status;
         try {
           const resp = await fetch(e.request);
@@ -134,8 +115,6 @@ const getHandler = async (e) => {
     );
   }
 };
-
-const OFFLINE_TAGS_URL = "http://sw.local/elfeed/offline-tags";
 
 const mergeTagsOffline = async (body) => {
   return withLock(OFFLINE_TAGS_URL, async () => {
@@ -290,19 +269,12 @@ const putHandler = async (e) => {
   }
 };
 
-self.addEventListener("fetch", (e) => {
-  const url = new URL(e.request.url);
-  if (url.origin !== location.origin) return;
-  else if (e.request.method === "GET") getHandler(e);
-  else if (e.request.method === "PUT") putHandler(e);
-});
-
-async function notifyAll(msg) {
+const notifyAll = async (msg) => {
   const cs = await self.clients.matchAll();
   cs.forEach((c) => c.postMessage(msg));
-}
+};
 
-async function metaPut(key, info) {
+const metaPut = async (key, info) => {
   const m = await caches.open(META);
   await m.put(
     key + ":meta",
@@ -310,15 +282,15 @@ async function metaPut(key, info) {
       headers: { "content-type": "application/json" },
     }),
   );
-}
+};
 
-async function metaGet(key) {
+const metaGet = async (key) => {
   const m = await caches.open(META);
   const r = await m.match(key + ":meta");
   return r ? await r.json() : null;
-}
+};
 
-async function bytesUsed(cacheName) {
+const bytesUsed = async (cacheName) => {
   const c = await caches.open(cacheName);
   const keys = await c.keys();
   let total = 0;
@@ -327,15 +299,15 @@ async function bytesUsed(cacheName) {
     total += mi.size || 0;
   }
   return total;
-}
+};
 
-async function prefetchIds(ids) {
+const prefetchIds = async (ids) => {
   const cache = await caches.open(C_CONTENT);
   const q = ids.slice();
   let done = 0;
   const start = await bytesUsed(C_CONTENT);
 
-  async function worker() {
+  const worker = async () => {
     while (q.length) {
       const id = q.shift();
       const url = `/elfeed/content/${id}`;
@@ -367,7 +339,7 @@ async function prefetchIds(ids) {
         notifyAll({ type: "PREFETCH_PROGRESS", done, total: ids.length });
       }
     }
-  }
+  };
 
   const workers = Array.from(
     { length: Math.min(PREFETCH_CONCURRENCY, ids.length) },
@@ -386,7 +358,34 @@ async function prefetchIds(ids) {
       type: "PREFETCH_STOP",
       reason: `Only ${done} of ${ids.length} entries prefetched`,
     });
-}
+};
+
+self.addEventListener("install", (e) => {
+  e.waitUntil(caches.open(C_SHELL).then((c) => c.addAll(SHELL)));
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (e) => {
+  e.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => ![C_SHELL, C_CONTENT].includes(k))
+            .map((k) => caches.delete(k)),
+        ),
+      ),
+  );
+  self.clients.claim();
+});
+
+self.addEventListener("fetch", (e) => {
+  const url = new URL(e.request.url);
+  if (url.origin !== location.origin) return;
+  else if (e.request.method === "GET") getHandler(e);
+  else if (e.request.method === "PUT") putHandler(e);
+});
 
 self.addEventListener("message", (e) => {
   const msg = e.data || {};
