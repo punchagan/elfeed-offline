@@ -2,6 +2,7 @@ open Brr
 module Fetch = Brr_io.Fetch
 module Message = Brr_io.Message
 module Sw = Brr_webworkers.Service_worker
+open Elfeed_offline_web
 open Util
 open Nav
 open State

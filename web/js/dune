@@ -1,7 +1,8 @@
 (executable
  (name app)
  (modes js)
- (libraries brr))
+ (modules app)
+ (libraries brr elfeed_offline_web))
 
 (rule
  (mode promote)
@@ -9,3 +10,8 @@
  (deps app.bc.js)
  (action
   (copy %{deps} %{target})))
+
+(library
+ (name elfeed_offline_web)
+ (modules state util entry icons nav api util)
+ (libraries brr))
