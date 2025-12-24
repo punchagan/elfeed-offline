@@ -134,6 +134,11 @@ let do_search () =
       match status with
       | 200 ->
           display_results response
+      | 401 ->
+          Fut.error
+            (Jv.Error.v
+               (Jstr.v
+                  "Unauthorized: Login using your Elfeed offline credentials" ) )
       | 500 | 403 (* Emacs elfeed server stopped, but httpd running *) ->
           Fut.error (Jv.Error.v (Jstr.v "Is the Emacs elfeed server running?"))
       | _ ->

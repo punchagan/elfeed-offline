@@ -59,3 +59,37 @@ let forward (req : Dream.request) meth =
   let headers = Http.Response.headers resp |> Cohttp.Header.to_list in
   let status = Cohttp.Response.status resp |> Cohttp.Code.code_of_status in
   Dream.respond ~headers ~status:(Dream.int_to_status status) html
+
+let make_basic_auth_middleware ~username ~password () =
+  let unauthorized () =
+    Dream.respond ~status:`Unauthorized
+      ~headers:[("WWW-Authenticate", "Basic realm=\"Elfeed Proxy\"")]
+      "Unauthorized"
+  in
+  let basic_auth_middleware handler req =
+    (* Ignore URLs not starting /elfeed/. The shell can be served to non
+       authenticated users too. *)
+    if not (String.starts_with ~prefix:"/elfeed/" (Dream.target req)) then
+      handler req
+    else
+      match Dream.header req "Authorization" with
+      | None ->
+          unauthorized ()
+      | Some auth_header -> (
+        match String.split_on_char ' ' auth_header with
+        | ["Basic"; encoded] -> (
+          match Base64.decode encoded with
+          | Error _ ->
+              unauthorized ()
+          | Ok decoded -> (
+            match String.split_on_char ':' decoded with
+            | [user; pass] ->
+                if String.equal user username && String.equal pass password then
+                  handler req
+                else unauthorized ()
+            | _ ->
+                unauthorized () ) )
+        | _ ->
+            unauthorized () )
+  in
+  basic_auth_middleware
