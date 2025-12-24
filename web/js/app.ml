@@ -150,6 +150,9 @@ let on_message e =
   | "PREFETCH_STOP" ->
       let reason = Jv.to_string (Jv.get data "reason") in
       set_status (Printf.sprintf "Stopped: %s" reason)
+  | "PREFETCH_ERROR" ->
+      let id = Jv.to_string (Jv.get data "msg") in
+      set_status (Printf.sprintf "Error: %s" id)
   | _ ->
       ()
 

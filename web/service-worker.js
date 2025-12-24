@@ -321,6 +321,13 @@ const prefetchIds = async (ids) => {
 
       try {
         const resp = await fetch(req);
+        if (!resp.ok) {
+          notifyAll({
+            type: "PREFETCH_ERROR",
+            msg: `Failed to fetch ${id} with ${resp.statusText}`,
+          });
+          continue;
+        }
         const clone = resp.clone();
         await cache.put(req, resp);
         const size = (await clone.arrayBuffer()).byteLength;
@@ -335,8 +342,7 @@ const prefetchIds = async (ids) => {
         }
       } catch {
         // ignore; continue with next
-        done++;
-        notifyAll({ type: "PREFETCH_PROGRESS", done, total: ids.length });
+        notifyAll({ type: "PREFETCH_ERROR", msg: `Error when fetching ${id}` });
       }
     }
   };
