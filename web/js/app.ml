@@ -11,20 +11,21 @@ let get_query () =
   El.prop El.Prop.value q_el |> Jstr.trim
 
 let prefetch_top_n ?(n = 30) _click_evt =
-  let ids =
-    state.results |> List.take n
-    |> List.map (fun webid ->
-        Hashtbl.find state.entries webid
-        |> fun e -> e.content_hash |> Jv.of_string )
-  in
   let container = Sw.Container.of_navigator G.navigator in
   match Sw.Container.controller container with
   | Some w ->
       let worker = Sw.as_worker w in
+      let hashes =
+        state.results |> List.take n
+        |> List.map (fun webid ->
+            Hashtbl.find state.entries webid
+            |> fun e -> e.content_hash |> Jv.of_string )
+      in
       Brr_webworkers.Worker.post worker
         (Jv.obj
-           [|("type", Jv.of_string "PREFETCH"); ("ids", ids |> Jv.of_jv_list)|] ) ;
-      set_status (Printf.sprintf "Starting… 0/%d" (List.length ids))
+           [| ("type", Jv.of_string "PREFETCH")
+            ; ("content_hashes", hashes |> Jv.of_jv_list) |] ) ;
+      set_status (Printf.sprintf "Starting… 0/%d" (List.length hashes))
   | None ->
       set_status "No service worker found."
 

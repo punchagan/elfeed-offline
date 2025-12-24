@@ -301,9 +301,9 @@ const bytesUsed = async (cacheName) => {
   return total;
 };
 
-const prefetchIds = async (ids) => {
+const prefetchIds = async (hashes) => {
   const cache = await caches.open(C_CONTENT);
-  const q = ids.slice();
+  const q = hashes.slice();
   let done = 0;
   const start = await bytesUsed(C_CONTENT);
 
@@ -315,7 +315,7 @@ const prefetchIds = async (ids) => {
 
       if (await cache.match(req)) {
         done++;
-        notifyAll({ type: "PREFETCH_PROGRESS", done, total: ids.length });
+        notifyAll({ type: "PREFETCH_PROGRESS", done, total: hashes.length });
         continue;
       }
 
@@ -333,7 +333,7 @@ const prefetchIds = async (ids) => {
         const size = (await clone.arrayBuffer()).byteLength;
         await metaPut(url, { ts: Date.now(), size });
         done++;
-        notifyAll({ type: "PREFETCH_PROGRESS", done, total: ids.length });
+        notifyAll({ type: "PREFETCH_PROGRESS", done, total: hashes.length });
 
         if (start + size > PREFETCH_MAX_BYTES) {
           notifyAll({ type: "PREFETCH_STOP", reason: "quota" });
@@ -348,12 +348,12 @@ const prefetchIds = async (ids) => {
   };
 
   const workers = Array.from(
-    { length: Math.min(PREFETCH_CONCURRENCY, ids.length) },
+    { length: Math.min(PREFETCH_CONCURRENCY, hashes.length) },
     worker,
   );
   await Promise.all(workers);
-  if (done === ids.length)
-    notifyAll({ type: "PREFETCH_DONE", total: ids.length });
+  if (done === hashes.length)
+    notifyAll({ type: "PREFETCH_DONE", total: hashes.length });
   else if (done === 0)
     notifyAll({
       type: "PREFETCH_STOP",
@@ -362,7 +362,7 @@ const prefetchIds = async (ids) => {
   else
     notifyAll({
       type: "PREFETCH_STOP",
-      reason: `Only ${done} of ${ids.length} entries prefetched`,
+      reason: `Only ${done} of ${hashes.length} entries prefetched`,
     });
 };
 
@@ -395,7 +395,7 @@ self.addEventListener("fetch", (e) => {
 
 self.addEventListener("message", (e) => {
   const msg = e.data || {};
-  if (msg.type === "PREFETCH" && Array.isArray(msg.ids)) {
-    e.waitUntil(prefetchIds(msg.ids));
+  if (msg.type === "PREFETCH" && Array.isArray(msg.content_hashes)) {
+    e.waitUntil(prefetchIds(msg.content_hashes));
   }
 });
