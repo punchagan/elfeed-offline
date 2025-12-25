@@ -15,6 +15,8 @@ module Config = struct
   let shell =
     ["/"; "/index.html"; "/manifest.webmanifest"; "/css/app.css"; "/js/app.js"]
     |> List.map Jstr.v
+
+  let alternate_search_param = "@999-days-old"
 end
 
 (** Helpers to return content by strategy  *)
@@ -51,6 +53,28 @@ module Fetch_strategy = struct
         Fut.ok response
     | None ->
         _network_request_and_cache ~cache request
+
+  let cache_first_with_alternate_and_refresh request alternate cache_name =
+    let open Fut.Result_syntax in
+    let storage = Fetch.caches () in
+    let* cache = Cache_storage.open' storage cache_name in
+    let* cached_response = Fetch.Cache.match' cache request in
+    match cached_response with
+    | Some response ->
+        let network_response = _network_request_and_cache ~cache request in
+        (* TODO: Allow passing a callback for this await *)
+        Fut.await network_response (fun _ -> ()) ;
+        Fut.ok response
+    | None -> (
+        let* alternate_cached = Fetch.Cache.match' cache alternate in
+        match alternate_cached with
+        | Some response ->
+            let network_response = _network_request_and_cache ~cache request in
+            (* TODO: Use callback from user here *)
+            Fut.await network_response (fun _ -> ()) ;
+            Fut.ok response
+        | None ->
+            _network_request_and_cache ~cache request )
 end
 
 let on_install e =
@@ -103,6 +127,20 @@ let on_fetch e =
     (* Content at a hash would never change *)
     | s when Jstr.starts_with ~prefix:(Jstr.of_string "/elfeed/content") path ->
         let response = Fetch_strategy.cache_first request Config.c_content in
+        Fetch.Ev.respond_with e response
+    (* Return cached response for /elfeed/search *)
+    | s when Jstr.starts_with ~prefix:(Jstr.of_string "/elfeed/search") path ->
+        let q_param =
+          Config.alternate_search_param |> Jstr.v |> Uri.encode_component
+          |> Result.get_ok
+        in
+        let alternate =
+          Jstr.append (Jstr.v "/elfeed/search?q=") q_param |> Fetch.Request.v
+        in
+        let response =
+          Fetch_strategy.cache_first_with_alternate_and_refresh request
+            alternate Config.c_content
+        in
         Fetch.Ev.respond_with e response
     | _ ->
         Console.log [Jv.of_string "SW fetch"; Jv.of_jstr path] ;
