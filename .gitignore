@@ -3,3 +3,4 @@
 /dune.lock/
 /ssl/
 /web/js/app.js
+/web/sw.js

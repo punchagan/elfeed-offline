@@ -1,0 +1,12 @@
+(executable
+ (name sw)
+ (modes js)
+ (modules sw)
+ (libraries brr))
+
+(rule
+ (mode promote)
+ (target sw.js)
+ (deps sw.bc.js)
+ (action
+  (copy %{deps} %{target})))
