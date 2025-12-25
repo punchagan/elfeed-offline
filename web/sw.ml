@@ -54,7 +54,8 @@ module Fetch_strategy = struct
     | None ->
         _network_request_and_cache ~cache request
 
-  let cache_first_with_alternate_and_refresh request alternate cache_name =
+  let cache_first_with_alternate_and_refresh ~onrefresh request alternate
+      cache_name =
     let open Fut.Result_syntax in
     let storage = Fetch.caches () in
     let* cache = Cache_storage.open' storage cache_name in
@@ -62,19 +63,69 @@ module Fetch_strategy = struct
     match cached_response with
     | Some response ->
         let network_response = _network_request_and_cache ~cache request in
-        (* TODO: Allow passing a callback for this await *)
-        Fut.await network_response (fun _ -> ()) ;
+        let old = Fetch.Response.of_response response in
+        Fut.await network_response (onrefresh ~old) ;
         Fut.ok response
     | None -> (
         let* alternate_cached = Fetch.Cache.match' cache alternate in
         match alternate_cached with
         | Some response ->
             let network_response = _network_request_and_cache ~cache request in
-            (* TODO: Use callback from user here *)
-            Fut.await network_response (fun _ -> ()) ;
+            let old = Fetch.Response.of_response response in
+            Fut.await network_response (onrefresh ~old) ;
             Fut.ok response
         | None ->
             _network_request_and_cache ~cache request )
+end
+
+module SearchUpdateNotification = struct
+  type t = {type_: string; delay: float}
+
+  let notify_all msg =
+    let jv =
+      Jv.obj
+        [|("type", Jv.of_string msg.type_); ("delay", Jv.of_float msg.delay)|]
+    in
+    let open Fut.Result_syntax in
+    let* clients = Sw.Clients.match_all Sw.G.clients in
+    let _ = List.iter (fun client -> Sw.Client.post client jv) clients in
+    Fut.ok ()
+
+  let notify_search_update () =
+    let now = Ptime_clock.now () in
+    fun ~old r ->
+      match r with
+      | Ok response ->
+          if Fetch.Response.status response <> 200 then ()
+          else
+            let open Fut.Result_syntax in
+            let _ =
+              let* old = Fetch.Response.as_body old |> Fetch.Body.json in
+              let old = Jv.to_jv_list old in
+              let* new_ = Fetch.Response.as_body response |> Fetch.Body.json in
+              let new_ = Jv.to_jv_list new_ in
+              let old_ids =
+                List.map (fun jv -> Jv.get jv "webid" |> Jv.to_string) old
+              in
+              let new_ids =
+                List.map (fun jv -> Jv.get jv "webid" |> Jv.to_string) new_
+              in
+              let is_different =
+                List.length old_ids <> List.length new_ids
+                || List.exists (fun jv -> not (List.mem jv old_ids)) new_ids
+              in
+              if not is_different then Fut.ok ()
+              else
+                let elapsed =
+                  Ptime.diff (Ptime_clock.now ()) now |> Ptime.Span.to_float_s
+                in
+                let msg = {type_= "SEARCH_UPDATE"; delay= elapsed} in
+                notify_all msg
+            in
+            ()
+      | Error e ->
+          Console.log [Jv.of_string "Search cache failed to update."; e] ;
+          ()
 end
 
 let on_install e =
@@ -138,8 +189,9 @@ let on_fetch e =
           Jstr.append (Jstr.v "/elfeed/search?q=") q_param |> Fetch.Request.v
         in
         let response =
-          Fetch_strategy.cache_first_with_alternate_and_refresh request
-            alternate Config.c_content
+          Fetch_strategy.cache_first_with_alternate_and_refresh
+            ~onrefresh:(SearchUpdateNotification.notify_search_update ())
+            request alternate Config.c_content
         in
         Fetch.Ev.respond_with e response
     | _ ->

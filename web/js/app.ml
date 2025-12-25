@@ -180,7 +180,18 @@ let on_message e =
   | "PREFETCH_ERROR" ->
       let id = Jv.to_string (Jv.get data "msg") in
       set_status (Printf.sprintf "Error: %s" id)
-  | _ ->
+  | "SEARCH_UPDATE" ->
+      let delay = Jv.to_float (Jv.get data "delay") in
+      if delay < 0.5 then
+        (* When the previous response was probably not "read" by the user,
+           automatically update the UI. *)
+        search ()
+      else
+        set_status
+          "UPDATED results available. Submit search to see updated results."
+  | t ->
+      Console.log
+        [Jv.of_string "Unknown message type received in app.ml"; Jv.of_string t] ;
       ()
 
 let mark_all_as_read _ =
