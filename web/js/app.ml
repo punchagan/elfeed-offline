@@ -135,40 +135,36 @@ let search () =
 
 let on_message e =
   let data = e |> Ev.as_type |> Message.Ev.data in
-  match Jv.to_string (Jv.get data "type") with
-  | "PREFETCH_PROGRESS" ->
-      let done_ = Jv.to_int (Jv.get data "done") in
-      let total = Jv.to_int (Jv.get data "total") in
-      set_status (Printf.sprintf "Saving… %d/%d" done_ total)
-  | "PREFETCH_DONE" ->
-      let total = Jv.to_int (Jv.get data "total") in
-      set_status (Printf.sprintf "Saved %d items." total)
-  | "PREFETCH_SEARCH_DONE" ->
-      set_status
-        (Printf.sprintf "Prefetched search query data for offline search")
-  | "PREFETCH_SEARCH_FAILED" ->
-      set_status
-        (Printf.sprintf
-           "Failed to prefetch search query data for offline search" )
-  | "PREFETCH_STOP" ->
-      let reason = Jv.to_string (Jv.get data "reason") in
-      set_status (Printf.sprintf "Stopped: %s" reason)
-  | "PREFETCH_ERROR" ->
-      let id = Jv.to_string (Jv.get data "msg") in
-      set_status (Printf.sprintf "Error: %s" id)
-  | "SEARCH_UPDATE" ->
-      let delay = Jv.to_float (Jv.get data "delay") in
-      if delay < 0.5 then
-        (* When the previous response was probably not "read" by the user,
+  let module Msg = Elfeed_shared.Elfeed_message in
+  try
+    match Msg.of_jv data with
+    | Prefetch_progress {done_; total} ->
+        set_status (Printf.sprintf "Saving… %d/%d" done_ total)
+    | Prefetch_done {total} ->
+        set_status (Printf.sprintf "Saved %d items." total)
+    | Prefetch_error {msg} ->
+        set_status (Printf.sprintf "Error: %s" msg)
+    | Search_update {delay} ->
+        if delay < 0.5 then
+          (* When the previous response was probably not "read" by the user,
            automatically update the UI. *)
-        search ()
-      else
-        set_status
-          "UPDATED results available. Submit search to see updated results."
-  | t ->
-      Console.log
-        [Jv.of_string "Unknown message type received in app.ml"; Jv.of_string t] ;
-      ()
+          search ()
+        else
+          set_status
+            "UPDATED results available. Submit search to see updated results."
+    (* TODO: Do we need these. Fix when prefetch is implemented *)
+    (* | "PREFETCH_SEARCH_DONE" -> *)
+    (*     set_status *)
+    (*       (Printf.sprintf "Prefetched search query data for offline search") *)
+    (* | "PREFETCH_SEARCH_FAILED" -> *)
+    (*     set_status *)
+    (*       (Printf.sprintf *)
+    (*          "Failed to prefetch search query data for offline search" ) *)
+    (* | "PREFETCH_STOP" -> *)
+    (*     let reason = Jv.to_string (Jv.get data "reason") in *)
+    (*     set_status (Printf.sprintf "Stopped: %s" reason) *)
+  with Msg.Parse_error _ ->
+    Console.log [Jv.of_string "Failed to parse message received in app.ml"; data]
 
 let mark_all_as_read _ =
   let data =

@@ -11,7 +11,14 @@
  (action
   (copy %{deps} %{target})))
 
+; Library shared between the web app and the service worker
+(library
+ (name elfeed_shared)
+ (modules elfeed_message)
+ (libraries brr))
+
+; Library for the web app to allow testing
 (library
  (name elfeed_offline_web)
  (modules offline_search state util entry icons nav api util)
- (libraries brr astring str ptime ptime.clock uri))
+ (libraries brr astring str ptime ptime.clock uri elfeed_shared))

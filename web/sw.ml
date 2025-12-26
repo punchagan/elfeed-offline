@@ -4,7 +4,9 @@ module Cache = Fetch.Cache
 module Cache_storage = Cache.Storage
 module Workers = Brr_webworkers
 module Sw = Workers.Service_worker
+module Msg = Elfeed_shared.Elfeed_message
 
+(** Configuration for caches and resources to cache  *)
 module Config = struct
   let c_shell = "shell-v1" |> Jstr.v
 
@@ -79,13 +81,8 @@ module Fetch_strategy = struct
 end
 
 module SearchUpdateNotification = struct
-  type t = {type_: string; delay: float}
-
   let notify_all msg =
-    let jv =
-      Jv.obj
-        [|("type", Jv.of_string msg.type_); ("delay", Jv.of_float msg.delay)|]
-    in
+    let jv = Msg.to_jv msg in
     let open Fut.Result_syntax in
     let* clients = Sw.Clients.match_all Sw.G.clients in
     let _ = List.iter (fun client -> Sw.Client.post client jv) clients in
@@ -119,7 +116,7 @@ module SearchUpdateNotification = struct
                 let elapsed =
                   Ptime.diff (Ptime_clock.now ()) now |> Ptime.Span.to_float_s
                 in
-                let msg = {type_= "SEARCH_UPDATE"; delay= elapsed} in
+                let (msg : Msg.t) = Search_update {delay= elapsed} in
                 notify_all msg
             in
             ()
