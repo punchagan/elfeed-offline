@@ -30,7 +30,7 @@ let prefetch_top_n ?(n = 30) _click_evt =
   | None ->
       set_status "No service worker found."
 
-let update_app_state ~cached data =
+let update_app_state ~use_offline_search data =
   let _entries =
     data |> Jv.to_jv_list
     |> List.filter (Jv.has "content")
@@ -61,25 +61,19 @@ let update_app_state ~cached data =
   let q_el = get_element_by_id_exn "q" in
   let query = El.prop El.Prop.value q_el |> Jstr.to_string in
   let results =
-    (if cached then Offline_search.filter_results ~query _entries else _entries)
+    ( if use_offline_search then Offline_search.filter_results ~query _entries
+      else _entries )
     |> List.map (fun e -> e.webid)
   in
   state.results <- results
 
 let display_results response =
   let open Fut.Result_syntax in
-  let headers = Fetch.Response.headers response in
   let* data = response |> Fetch.Response.as_body |> Fetch.Body.json in
-  let cache_header =
-    Fetch.Headers.find (Jstr.of_string "X-Cache") headers
-    |> Option.map Jstr.to_string
-  in
-  let cached =
-    cache_header
-    |> Option.map (( = ) "OFFLINE-SEARCH")
-    |> Option.value ~default:false
-  in
-  update_app_state ~cached data ;
+  (* NOTE: We are always using offline search, since we are being cache-first
+     now. This means any discrepancies between the two searches are more likely
+     to be user visible than before. *)
+  update_app_state ~use_offline_search:true data ;
   ( match state.selected with
   | Some webid ->
       if not (List.mem webid state.results) then close_entry ()
@@ -93,26 +87,8 @@ let display_results response =
   in
   let results_el = get_element_by_id_exn "results" in
   El.set_children results_el children ;
-  let n = data |> Jv.to_jv_list |> List.length in
-  let loaded = "loaded " ^ string_of_int n ^ " items" in
-  let status =
-    match cache_header with
-    | Some t ->
-        let suffix =
-          match t with
-          | "HIT" ->
-              " (from cache)"
-          | "HIT-X" ->
-              " (from cache; Emacs elfeed server offline)"
-          | "OFFLINE-SEARCH" ->
-              " (from offline-search-cache)"
-          | _ ->
-              " (from unknown cached entry)"
-        in
-        loaded ^ suffix
-    | None ->
-        loaded ^ " (from the server)"
-  in
+  let n = children |> List.length in
+  let status = "found " ^ string_of_int n ^ " items" in
   set_status status ; Fut.ok ()
 
 let do_search () =
