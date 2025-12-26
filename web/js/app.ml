@@ -26,6 +26,24 @@ let prefetch_top_n ?(n = 30) _click_evt =
   | None ->
       set_status "No service worker found."
 
+let confirm_cache_delete _click_evt =
+  let confirm = Jv.get Jv.global "confirm" in
+  let msg = "Are you sure you want to clear the offline cache?" in
+  let ok =
+    Jv.call confirm "call" [|Jv.undefined; Jv.of_string msg|] |> Jv.to_bool
+  in
+  if ok then
+    let container = Sw.Container.of_navigator G.navigator in
+    match Sw.Container.controller container with
+    | Some w ->
+        let worker = Sw.as_worker w in
+        let msg = Msg.Delete_cache |> Msg.to_jv in
+        Brr_webworkers.Worker.post worker msg ;
+        set_status "Requested cache deletion."
+    | None ->
+        set_status "No service worker found."
+  else ()
+
 let update_app_state ~use_offline_search data =
   let _entries =
     data |> Jv.to_jv_list
@@ -130,7 +148,10 @@ let on_message e =
         else
           set_status
             "UPDATED results available. Submit search to see updated results."
-    | Prefetch_request _ ->
+    | Cache_cleared status ->
+        if status then set_status "Offline cache cleared."
+        else set_status "Failed to clear offline cache."
+    | Prefetch_request _ | Delete_cache ->
         Console.warn
           [Jv.of_string "Received unexpected PREFETCH_REQUEST message"] ;
         ()
@@ -204,6 +225,10 @@ let setup_handlers () =
   let n = 100 in
   let offline_btn_el = get_element_by_id_exn "save-offline" in
   Ev.listen Ev.click (prefetch_top_n ~n) (El.as_target offline_btn_el) |> ignore ;
+  (* Hook up clear-cache btn click handler *)
+  let clear_cache_btn_el = get_element_by_id_exn "clear-cache" in
+  Ev.listen Ev.click confirm_cache_delete (El.as_target clear_cache_btn_el)
+  |> ignore ;
   (* Hook up mark-all-read btn click handler *)
   let mark_all_read_btn_el = get_element_by_id_exn "mark-all-read" in
   Ev.listen Ev.click confirm_mark_all_as_read

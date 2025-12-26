@@ -295,6 +295,13 @@ let on_message e =
         Prefetch.prefetch_content hashes |> ignore ;
         Fut.await (Fut.tick ~ms:Prefetch.delay_ms) (fun () ->
             Prefetch.prefetch_alternate_search_with_content () )
+    | Delete_cache ->
+        let storage = Fetch.caches () in
+        Fut.await (Cache_storage.delete storage Config.c_content) (function
+          | Ok _ ->
+              Notify.notify_all (Cache_cleared true) |> ignore
+          | Error e ->
+              Notify.notify_all (Cache_cleared false) |> ignore )
     | _ ->
         Console.warn [Jv.of_string "Received unexpected message type"] ;
         ()

@@ -7,8 +7,10 @@ type t =
   | Prefetch_done of {total: int}
   | Prefetch_progress of {done_: int; total: int}
   | Prefetch_error of {msg: string}
+  | Cache_cleared of bool
   (* Messages from app to SW *)
   | Prefetch_request of {hashes: string list}
+  | Delete_cache (* Only support clearing "all" cached content  *)
 
 exception Parse_error of string
 
@@ -25,6 +27,10 @@ let type_ = function
       "PREFETCH_ERROR"
   | Prefetch_request _ ->
       "PREFETCH_REQUEST"
+  | Delete_cache ->
+      "DELETE_CACHE"
+  | Cache_cleared _ ->
+      "CACHE_CLEARED"
 
 let to_jv m =
   let o = Jv.obj [||] in
@@ -49,6 +55,11 @@ let to_jv m =
   | Prefetch_request {hashes} ->
       Jv.set o "hashes" (Jv.of_jstr_list (List.map Jstr.of_string hashes)) ;
       o
+  | Delete_cache ->
+      o
+  | Cache_cleared status ->
+      Jv.set o "status" (Jv.of_bool status) ;
+      o
 
 let of_jv (v : Jv.t) : t =
   match Jv.get v "type" |> Jv.to_string with
@@ -67,5 +78,9 @@ let of_jv (v : Jv.t) : t =
   | "PREFETCH_REQUEST" ->
       Prefetch_request
         {hashes= Jv.get v "hashes" |> Jv.to_jstr_list |> List.map Jstr.to_string}
+  | "DELETE_CACHE" ->
+      Delete_cache
+  | "CACHE_CLEARED" ->
+      Cache_cleared (Jv.get v "status" |> Jv.to_bool)
   | x ->
       raise (Parse_error x)
