@@ -5,7 +5,7 @@ module Sw = Brr_webworkers.Service_worker
 open Elfeed_offline_web
 open Util
 open Nav
-open State
+module Msg = Elfeed_shared.Elfeed_message
 
 let get_query () =
   let q_el = get_element_by_id_exn "q" in
@@ -17,16 +17,12 @@ let prefetch_top_n ?(n = 30) _click_evt =
   | Some w ->
       let worker = Sw.as_worker w in
       let hashes =
-        state.results |> List.take n
+        State.state.results |> List.take n
         |> List.map (fun webid ->
-            Hashtbl.find state.entries webid
-            |> fun e -> e.content_hash |> Jv.of_string )
+            Hashtbl.find State.state.entries webid |> fun e -> e.content_hash )
       in
-      Brr_webworkers.Worker.post worker
-        (Jv.obj
-           [| ("type", Jv.of_string "PREFETCH")
-            ; ("content_hashes", hashes |> Jv.of_jv_list) |] ) ;
-      set_status (Printf.sprintf "Starting… 0/%d" (List.length hashes))
+      let msg = Msg.Prefetch_request {hashes} |> Msg.to_jv in
+      Brr_webworkers.Worker.post worker msg
   | None ->
       set_status "No service worker found."
 
@@ -34,38 +30,19 @@ let update_app_state ~use_offline_search data =
   let _entries =
     data |> Jv.to_jv_list
     |> List.filter (Jv.has "content")
-    |> List.map (fun e ->
-        let title = Jv.get e "title" |> Jv.to_string in
-        let feed_data = Jv.get e "feed" in
-        let feed_title = Jv.get feed_data "title" |> Jv.to_string in
-        let feed_url = Jv.get feed_data "url" |> Jv.to_string in
-        let feed = {title= feed_title; url= feed_url} in
-        let published_ms = Jv.get e "date" |> Jv.to_float in
-        let tags = Jv.get e "tags" |> Jv.to_list Jv.to_string in
-        let is_unread = List.exists (String.equal "unread") tags in
-        let is_starred = List.exists (String.equal "starred") tags in
-        let webid = Jv.get e "webid" |> Jv.to_string in
-        let link = Jv.get e "link" |> Jv.to_string in
-        let content_hash = Jv.get e "content" |> Jv.to_string in
-        { webid
-        ; title
-        ; link
-        ; content_hash
-        ; feed
-        ; tags
-        ; is_unread
-        ; is_starred
-        ; published_ms } )
+    |> List.map Entry.entry_of_jv
   in
-  List.iter (fun e -> Hashtbl.replace state.entries e.webid e) _entries ;
+  List.iter
+    (fun (e : State.entry) -> Hashtbl.replace State.state.entries e.webid e)
+    _entries ;
   let q_el = get_element_by_id_exn "q" in
   let query = El.prop El.Prop.value q_el |> Jstr.to_string in
   let results =
     ( if use_offline_search then Offline_search.filter_results ~query _entries
       else _entries )
-    |> List.map (fun e -> e.webid)
+    |> List.map (fun (e : State.entry) -> e.webid)
   in
-  state.results <- results
+  State.state.results <- results
 
 let display_results response =
   let open Fut.Result_syntax in
@@ -74,15 +51,15 @@ let display_results response =
      now. This means any discrepancies between the two searches are more likely
      to be user visible than before. *)
   update_app_state ~use_offline_search:true data ;
-  ( match state.selected with
+  ( match State.state.selected with
   | Some webid ->
-      if not (List.mem webid state.results) then close_entry ()
+      if not (List.mem webid State.state.results) then close_entry ()
       else render_nav ()
   | None ->
       () ) ;
   let children =
-    state.results
-    |> List.map (fun webid -> Hashtbl.find state.entries webid)
+    State.state.results
+    |> List.map (fun webid -> Hashtbl.find State.state.entries webid)
     |> List.map Entry.make_entry
   in
   let results_el = get_element_by_id_exn "results" in
@@ -135,13 +112,14 @@ let search () =
 
 let on_message e =
   let data = e |> Ev.as_type |> Message.Ev.data in
-  let module Msg = Elfeed_shared.Elfeed_message in
   try
     match Msg.of_jv data with
-    | Prefetch_progress {done_; total} ->
-        set_status (Printf.sprintf "Saving… %d/%d" done_ total)
+    | Prefetch_started {total} ->
+        set_status (Printf.sprintf "Starting… 0/%d" total)
     | Prefetch_done {total} ->
         set_status (Printf.sprintf "Saved %d items." total)
+    | Prefetch_progress {done_; total} ->
+        set_status (Printf.sprintf "Saving… %d/%d" done_ total)
     | Prefetch_error {msg} ->
         set_status (Printf.sprintf "Error: %s" msg)
     | Search_update {delay} ->
@@ -152,24 +130,17 @@ let on_message e =
         else
           set_status
             "UPDATED results available. Submit search to see updated results."
-    (* TODO: Do we need these. Fix when prefetch is implemented *)
-    (* | "PREFETCH_SEARCH_DONE" -> *)
-    (*     set_status *)
-    (*       (Printf.sprintf "Prefetched search query data for offline search") *)
-    (* | "PREFETCH_SEARCH_FAILED" -> *)
-    (*     set_status *)
-    (*       (Printf.sprintf *)
-    (*          "Failed to prefetch search query data for offline search" ) *)
-    (* | "PREFETCH_STOP" -> *)
-    (*     let reason = Jv.to_string (Jv.get data "reason") in *)
-    (*     set_status (Printf.sprintf "Stopped: %s" reason) *)
+    | Prefetch_request _ ->
+        Console.warn
+          [Jv.of_string "Received unexpected PREFETCH_REQUEST message"] ;
+        ()
   with Msg.Parse_error _ ->
     Console.log [Jv.of_string "Failed to parse message received in app.ml"; data]
 
 let mark_all_as_read _ =
   let data =
     Jv.obj
-      [| ("entries", state.results |> Jv.of_list Jv.of_string)
+      [| ("entries", State.state.results |> Jv.of_list Jv.of_string)
        ; ("remove", [Jstr.of_string "unread"] |> Jv.of_jstr_list) |]
   in
   Api.update_tag_data data
@@ -184,7 +155,7 @@ let confirm_mark_all_as_read evt =
   Ev.stop_propagation evt ;
   let confirm = Jv.get Jv.global "confirm" in
   let prompt = Jv.get Jv.global "prompt" in
-  match List.length state.results with
+  match List.length State.state.results with
   | 0 ->
       set_status "No entries to mark as read."
   | n when n < 10 ->

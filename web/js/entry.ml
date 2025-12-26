@@ -1,4 +1,3 @@
-open State
 open Brr
 
 let format_date (ms : float) =
@@ -44,7 +43,30 @@ let search_add_remove_feed_url evt =
       El.set_prop El.Prop.value new_q q_el ;
       Util.submit_search_form ()
 
-let make_entry (data : entry) =
+let entry_of_jv e : State.entry =
+  let title = Jv.get e "title" |> Jv.to_string in
+  let feed_data = Jv.get e "feed" in
+  let feed_title = Jv.get feed_data "title" |> Jv.to_string in
+  let feed_url = Jv.get feed_data "url" |> Jv.to_string in
+  let feed : State.feed = {title= feed_title; url= feed_url} in
+  let published_ms = Jv.get e "date" |> Jv.to_float in
+  let tags = Jv.get e "tags" |> Jv.to_list Jv.to_string in
+  let is_unread = List.exists (String.equal "unread") tags in
+  let is_starred = List.exists (String.equal "starred") tags in
+  let webid = Jv.get e "webid" |> Jv.to_string in
+  let link = Jv.get e "link" |> Jv.to_string in
+  let content_hash = Jv.get e "content" |> Jv.to_string in
+  { webid
+  ; title
+  ; link
+  ; content_hash
+  ; feed
+  ; tags
+  ; is_unread
+  ; is_starred
+  ; published_ms }
+
+let make_entry (data : State.entry) =
   let title_el =
     El.v
       ~at:[At.v At.Name.class' (Jstr.of_string "title")]
@@ -141,7 +163,7 @@ let make_entry (data : entry) =
         El.set_at At.Name.src (Some (Jstr.v content_url)) content_el ;
         (* Set reading mode *)
         Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
-        state.selected <- Some data.webid ;
+        State.state.selected <- Some data.webid ;
         Nav.render_nav () )
       (El.as_target entry)
   in
