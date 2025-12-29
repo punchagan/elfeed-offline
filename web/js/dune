@@ -2,7 +2,7 @@
  (name app)
  (modes js)
  (modules app)
- (libraries brr elfeed_offline_web))
+ (libraries brr elfeed_offline_web brr-lwd lwd))
 
 (rule
  (mode promote)
@@ -21,4 +21,4 @@
 (library
  (name elfeed_offline_web)
  (modules offline_search state util entry icons nav api util)
- (libraries brr astring str ptime ptime.clock uri elfeed_shared))
+ (libraries brr astring str ptime ptime.clock uri elfeed_shared lwd brr-lwd))

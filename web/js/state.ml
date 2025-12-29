@@ -19,3 +19,8 @@ type model =
   ; mutable selected: string option }
 
 let state = {results= []; selected= None; entries= Hashtbl.create 30}
+
+(* Reactive state *)
+let epoch_v : int Lwd.var = Lwd.var 0
+
+let bump_epoch () = Lwd.update (fun n -> n + 1) epoch_v

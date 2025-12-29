@@ -6,6 +6,27 @@ open Elfeed_offline_web
 open Util
 open Nav
 module Msg = Elfeed_shared.Elfeed_message
+open Brr_lwd
+
+let results_sidebar_doc : Elwd.t Lwd.t =
+  let children : El.t Lwd_seq.t Lwd.t =
+    Lwd.get State.epoch_v
+    |> Lwd.map ~f:(fun _ ->
+        State.state.results
+        |> List.map (fun webid ->
+            let entry = Hashtbl.find State.state.entries webid in
+            Entry.make_entry entry )
+        |> Lwd_seq.of_list )
+  in
+  (* container for results; children are reactive *)
+  Elwd.div ~at:[`P (At.class' (Jstr.v "results"))] [`S children]
+
+let mount_into (host : El.t) (doc : Elwd.t Lwd.t) =
+  let root = Lwd.observe doc in
+  let render () = El.set_children host [Lwd.quick_sample root] in
+  Lwd.set_on_invalidate root (fun _ ->
+      G.request_animation_frame (fun _ -> render ()) |> ignore ) ;
+  render ()
 
 let get_query () =
   let q_el = get_element_by_id_exn "q" in
@@ -60,7 +81,9 @@ let update_app_state ~use_offline_search data =
       else _entries )
     |> List.map (fun (e : State.entry) -> e.webid)
   in
-  State.state.results <- results
+  State.state.results <- results ;
+  (* Trigger a rerender of the sidebar *)
+  State.bump_epoch ()
 
 let display_results response =
   let open Fut.Result_syntax in
@@ -75,14 +98,7 @@ let display_results response =
       else render_nav ()
   | None ->
       () ) ;
-  let children =
-    State.state.results
-    |> List.map (fun webid -> Hashtbl.find State.state.entries webid)
-    |> List.map Entry.make_entry
-  in
-  let results_el = get_element_by_id_exn "results" in
-  El.set_children results_el children ;
-  let n = children |> List.length in
+  let n = List.length State.state.results in
   let status = "found " ^ string_of_int n ^ " items" in
   set_status status ; Fut.ok ()
 
@@ -258,6 +274,9 @@ let setup_handlers () =
 
 let () =
   setup_handlers () ;
+  (* Mount sidebar results *)
+  let results_el = get_element_by_id_exn "results" in
+  mount_into results_el results_sidebar_doc ;
   (* Initial load *)
   let q_el = get_element_by_id_exn "q" in
   El.set_at At.Name.value (Some (Jstr.of_string "@30-days-old +unread")) q_el ;

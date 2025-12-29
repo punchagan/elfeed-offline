@@ -41,7 +41,9 @@
   uri-sexp
   (alcotest :with-test)
   ptime
-  astring)
+  astring
+  lwd
+  brr-lwd)
  (tags
   ("elfeed" "rss" "feeds" "PWA" "offline" "proxy" "dream")))
 
