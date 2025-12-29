@@ -49,16 +49,40 @@ let forward (req : Dream.request) meth =
   in
   Dream.body req
   >>= fun body ->
-  Cohttp_lwt_unix.Client.call ~headers
-    ~body:(Cohttp_lwt.Body.of_string body)
-    meth target
-  >>= fun (resp, content) ->
-  Cohttp_lwt.Body.to_string content
-  >>= fun s ->
-  let html = if is_content_uri client_uri then wrapped_html s else s in
-  let headers = Http.Response.headers resp |> Cohttp.Header.to_list in
-  let status = Cohttp.Response.status resp |> Cohttp.Code.code_of_status in
-  Dream.respond ~headers ~status:(Dream.int_to_status status) html
+  Lwt.catch
+    (fun () ->
+      Cohttp_lwt_unix.Client.call ~headers
+        ~body:(Cohttp_lwt.Body.of_string body)
+        meth target
+      >>= fun (resp, content) ->
+      Cohttp_lwt.Body.to_string content
+      >>= fun s ->
+      let headers = Http.Response.headers resp |> Cohttp.Header.to_list in
+      let status = Cohttp.Response.status resp |> Cohttp.Code.code_of_status in
+      let html = if is_content_uri client_uri then wrapped_html s else s in
+      if status >= 400 && is_content_uri client_uri then
+        let error_html =
+          wrapped_html
+            (Printf.sprintf
+               "<h1>Error %d</h1><p>Failed to load content from the Elfeed \
+                server. Is it offline?</p>"
+               status )
+        in
+        let headers =
+          List.filter
+            (fun (k, _) -> not (String.equal k "Content-Type"))
+            headers
+        in
+        let status = if status >= 500 then 404 else status in
+        Dream.respond ~headers ~status:(Dream.int_to_status status) error_html
+      else Dream.respond ~headers ~status:(Dream.int_to_status status) html )
+    (fun _exn ->
+      let error_html =
+        wrapped_html
+          "<h1>Connection Error</h1><p>Failed to connect to the Elfeed server. \
+           Is it offline?</p>"
+      in
+      Dream.respond ~status:`Service_Unavailable error_html )
 
 let make_basic_auth_middleware ~username ~password () =
   let unauthorized () =
