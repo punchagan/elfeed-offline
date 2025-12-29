@@ -163,8 +163,33 @@ let make_entry (data : State.entry) =
         El.set_at At.Name.src (Some (Jstr.v content_url)) content_el ;
         (* Set reading mode *)
         Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
+        Console.log [Jv.of_string "Selected entry"; Jv.of_string data.webid] ;
         State.state.selected <- Some data.webid ;
         State.bump_epoch () )
       (El.as_target entry)
   in
   entry
+
+let update_entry_tags ~(state : State.model) (entry : State.entry) =
+  let state_added_tags =
+    match Hashtbl.find_opt state.tags_added entry.webid with
+    | Some tags ->
+        tags
+    | None ->
+        []
+  in
+  let state_removed_tags =
+    match Hashtbl.find_opt state.tags_removed entry.webid with
+    | Some tags ->
+        tags
+    | None ->
+        []
+  in
+  let updated_tags =
+    entry.tags
+    |> List.filter (fun t -> not (List.mem t state_removed_tags))
+    |> fun ts -> ts @ state_added_tags
+  in
+  let is_unread = List.exists (String.equal "unread") updated_tags in
+  let is_starred = List.exists (String.equal "starred") updated_tags in
+  {entry with tags= updated_tags; is_unread; is_starred}

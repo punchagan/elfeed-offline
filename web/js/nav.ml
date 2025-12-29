@@ -107,37 +107,46 @@ let tag_update_failure () =
   status_msg := "Failed to update tag data!" ;
   render_nav_status ()
 
-let mark_entry_as_read web_id =
-  let data =
-    Jv.obj
-      [| ("entries", [Jstr.of_string web_id] |> Jv.of_jstr_list)
-       ; ("remove", [Jstr.of_string "unread"] |> Jv.of_jstr_list) |]
+let post_tags_update () =
+  let module Msg = Elfeed_shared.Elfeed_message in
+  let tags_added =
+    Hashtbl.fold
+      (fun webid tags acc -> {Msg.webid; tags; action= `Add} :: acc)
+      state.tags_added []
   in
-  update_tag_data data tag_update_success tag_update_failure
+  let tags_removed =
+    Hashtbl.fold
+      (fun webid tags acc -> {Msg.webid; tags; action= `Remove} :: acc)
+      state.tags_removed []
+  in
+  let updates = tags_added @ tags_removed in
+  if List.length updates = 0 then ()
+  else
+    let module Sw = Brr_webworkers.Service_worker in
+    let container = Sw.Container.of_navigator G.navigator in
+    match Sw.Container.controller container with
+    | Some w ->
+        let worker = Sw.as_worker w in
+        let msg = Msg.Tag_update updates |> Msg.to_jv in
+        Brr_webworkers.Worker.post worker msg
+    | None ->
+        set_status "No service worker found."
+
+let mark_entry_as_read web_id =
+  State.remove_tags web_id ["unread"] ;
+  post_tags_update ()
 
 let mark_entry_as_unread web_id =
-  let data =
-    Jv.obj
-      [| ("entries", [Jstr.of_string web_id] |> Jv.of_jstr_list)
-       ; ("add", [Jstr.of_string "unread"] |> Jv.of_jstr_list) |]
-  in
-  update_tag_data data tag_update_success tag_update_failure
+  State.add_tags web_id ["unread"] ;
+  post_tags_update ()
 
 let star_entry web_id =
-  let data =
-    Jv.obj
-      [| ("entries", [Jstr.of_string web_id] |> Jv.of_jstr_list)
-       ; ("add", [Jstr.of_string "starred"] |> Jv.of_jstr_list) |]
-  in
-  update_tag_data data tag_update_success tag_update_failure
+  State.add_tags web_id ["starred"] ;
+  post_tags_update ()
 
 let unstar_entry web_id =
-  let data =
-    Jv.obj
-      [| ("entries", [Jstr.of_string web_id] |> Jv.of_jstr_list)
-       ; ("remove", [Jstr.of_string "starred"] |> Jv.of_jstr_list) |]
-  in
-  update_tag_data data tag_update_success tag_update_failure
+  State.remove_tags web_id ["starred"] ;
+  post_tags_update ()
 
 let close_entry _ =
   Document.body G.document |> El.set_class (Jstr.of_string "reading") false ;

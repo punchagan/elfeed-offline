@@ -12,7 +12,9 @@ module Config = struct
 
   let c_content = "content-v1" |> Jstr.v
 
-  let caches = [c_shell; c_content]
+  let c_tags = "tags-v1" |> Jstr.v
+
+  let caches = [c_shell; c_content; c_tags]
 
   let shell =
     ["/"; "/index.html"; "/manifest.webmanifest"; "/css/app.css"; "/js/app.js"]
@@ -220,6 +222,160 @@ module Prefetch = struct
             [Jv.of_string "Failed to prefetch alternate search content."; e] )
 end
 
+module Tags = struct
+  let pending_request = Jstr.v "pending-updates" |> Fetch.Request.v
+
+  let mk_tags_request ~(web_id : string) ~(tags : string list)
+      ~(action : [`Add | `Remove]) =
+    let action_key = match action with `Add -> "add" | `Remove -> "remove" in
+    let body_json =
+      Jv.obj
+        [| ("entries", Jv.of_jstr_list [Jstr.v web_id])
+         ; (action_key, Jv.of_jstr_list (List.map Jstr.v tags)) |]
+      |> Json.encode
+    in
+    let headers =
+      Fetch.Headers.of_assoc [(Jstr.v "content-type", Jstr.v "application/json")]
+    in
+    let init =
+      Fetch.Request.init ~method':(Jstr.v "PUT") ~headers
+        ~credentials:Fetch.Request.Credentials.same_origin
+        ~body:(Fetch.Body.of_jstr body_json :> Fetch.Body.init)
+        ()
+    in
+    Fetch.Request.v ~init (Jstr.v "/elfeed/tags")
+
+  let get_updates () =
+    let open Fut.Result_syntax in
+    let storage = Fetch.caches () in
+    let* cache = Cache_storage.open' storage Config.c_tags in
+    let* updates = Cache.match' cache pending_request in
+    match updates with
+    | None ->
+        Console.log [Jv.of_string "No pending tag updates in cache."] ;
+        Fut.ok []
+    | Some response -> (
+        let* body = Fetch.Response.as_body response |> Fetch.Body.text in
+        match Json.decode body with
+        | Ok jv ->
+            let updates_jv = Jv.to_jv_list jv in
+            let updates = List.map Msg.tag_update_of_jv updates_jv in
+            Fut.ok updates
+        | Error e ->
+            Console.log
+              [Jv.of_string "Failed to parse pending tag updates from cache."; e] ;
+            Fut.error e )
+
+  let set_updates updates =
+    let body =
+      Jv.of_jv_list (List.map Msg.tag_update_to_jv updates) |> Json.encode
+    in
+    let headers =
+      Fetch.Headers.of_assoc [(Jstr.v "content-type", Jstr.v "application/json")]
+    in
+    let init = Fetch.Response.init ~headers ~status:200 () in
+    let response =
+      Fetch.Response.v ~init
+        ~body:(Fetch.Body.of_jstr body :> Fetch.Body.init)
+        ()
+    in
+    let open Fut.Result_syntax in
+    let storage = Fetch.caches () in
+    let* cache = Cache_storage.open' storage Config.c_tags in
+    let* () = Cache.put cache pending_request response in
+    Fut.ok ()
+
+  let notify_pending_updates () =
+    let open Fut.Result_syntax in
+    let _ =
+      let* updates = get_updates () in
+      if List.length updates = 0 then Fut.ok ()
+      else (
+        Notify.notify_all (Msg.Offline_tags updates) |> ignore ;
+        let msg =
+          Printf.sprintf "You have %d pending tag updates to sync."
+            (List.length updates)
+        in
+        Console.log [Jv.of_string msg] ;
+        Fut.ok () )
+    in
+    ()
+
+  let sync_update ({webid; tags; action} : Msg.tag_update) =
+    let request = mk_tags_request ~web_id:webid ~tags ~action in
+    Fetch.request request
+
+  (* NOTE: We replay the updates instead of combining add and remove requests
+     since there could be cases in which a webid disappears on the server (if
+     the entry is deleted?) and the server then responds with a 404. Instead of
+     complex logic to discover the failing webid, we choose to simply replay
+     the changes here. *)
+  let sync_updates () =
+    let open Fut.Result_syntax in
+    let q = Queue.create () in
+    let rec worker () =
+      if Queue.is_empty q then (
+        notify_pending_updates () ;
+        Prefetch.prefetch_alternate_search_with_content () ;
+        () )
+      else
+        let update = Queue.pop q in
+        Fut.await (sync_update update) (function
+          | Error e ->
+              (* Server offline; Nothing to do *)
+              let msg =
+                "Tag update: failed due to network error for " ^ update.webid
+              in
+              Console.log [Jv.of_string msg; e] ;
+              ()
+          | Ok r ->
+              let status = Fetch.Response.status r in
+              let _ =
+                let* updates = get_updates () in
+                let msg =
+                  if status = 200 then
+                    Printf.sprintf "Tag update: succeeded for %s" update.webid
+                  else if status = 404 then
+                    (* webid not present on server; ignore *)
+                    Printf.sprintf
+                      "Tag update: webid not found on server for %s"
+                      update.webid
+                  else
+                    Printf.sprintf "Tag update: failed for %s with status %d"
+                      update.webid status
+                in
+                Console.log [Jv.of_string msg] ;
+                Fut.await
+                  ( match status with
+                  | 200 | 404 ->
+                      let remaining_updates =
+                        List.filter (fun u -> u <> update) updates
+                      in
+                      set_updates remaining_updates
+                  | _ ->
+                      Fut.ok () )
+                  (function Ok _ -> worker () | _ -> ()) ;
+                Fut.ok ()
+              in
+              () )
+    in
+    let _ =
+      let* updates = get_updates () in
+      List.iter (fun h -> Queue.push h q) updates ;
+      (if not (Queue.is_empty q) then worker ()) |> Fut.ok
+    in
+    ()
+
+  let persist_tag_updates_and_sync updates =
+    Fut.await (set_updates updates) (function
+      | Ok _ ->
+          Console.log [Jv.of_string "Tag updates persisted for later sync."] ;
+          sync_updates () |> ignore
+      | Error e ->
+          Console.log
+            [Jv.of_string "Failed to persist tag updates for later sync."; e] )
+end
+
 let on_install e =
   let request_shell =
     let open Fut.Result_syntax in
@@ -279,7 +435,8 @@ let on_fetch e =
             ~onrefresh:(Notify.search_update ()) request alternate
             Config.c_content
         in
-        Fetch.Ev.respond_with e response
+        Fetch.Ev.respond_with e response ;
+        Tags.sync_updates ()
     | _ ->
         Console.log [Jv.of_string "SW fetch"; Jv.of_jstr path] ;
         () ) ;
@@ -302,6 +459,8 @@ let on_message e =
               Notify.notify_all (Cache_cleared true) |> ignore
           | Error e ->
               Notify.notify_all (Cache_cleared false) |> ignore )
+    | Tag_update updates ->
+        Tags.persist_tag_updates_and_sync updates |> ignore
     | _ ->
         Console.warn [Jv.of_string "Received unexpected message type"] ;
         ()

@@ -13,14 +13,85 @@ type entry =
 
 type entry_map = (string, entry) Hashtbl.t
 
+type tag_map = (string, string list) Hashtbl.t
+
 type model =
   { mutable entries: entry_map
   ; mutable results: string list
-  ; mutable selected: string option }
+  ; mutable selected: string option
+  ; mutable tags_added: tag_map
+  ; mutable tags_removed: tag_map }
 
-let state = {results= []; selected= None; entries= Hashtbl.create 30}
+let state =
+  { results= []
+  ; selected= None
+  ; entries= Hashtbl.create 30
+  ; tags_added= Hashtbl.create 10
+  ; tags_removed= Hashtbl.create 10 }
 
 (* Reactive state *)
-let epoch_v : int Lwd.var = Lwd.var 0
+
+let update_entries = Lwd.var 0
+
+let bump_update_entries () = Lwd.update (fun n -> n + 1) update_entries
+
+let epoch_v = Lwd.var 0
 
 let bump_epoch () = Lwd.update (fun n -> n + 1) epoch_v
+
+(* State update helpers *)
+let add_tags webid tags =
+  (* Add tags to tags_added if not present *)
+  let existing =
+    match Hashtbl.find_opt state.tags_added webid with
+    | Some ts ->
+        ts
+    | None ->
+        []
+  in
+  let new_tags =
+    List.fold_left
+      (fun acc t -> if List.mem t acc then acc else t :: acc)
+      existing tags
+  in
+  Hashtbl.replace state.tags_added webid new_tags ;
+  (* Also remove from tags_removed if present *)
+  let removed =
+    match Hashtbl.find_opt state.tags_removed webid with
+    | Some ts ->
+        ts
+    | None ->
+        []
+  in
+  let updated_removed = List.filter (fun t -> not (List.mem t tags)) removed in
+  if updated_removed = [] then Hashtbl.remove state.tags_removed webid
+  else Hashtbl.replace state.tags_removed webid updated_removed ;
+  bump_update_entries ()
+
+let remove_tags webid tags =
+  (* Add tags to tags_removed if not present *)
+  let existing =
+    match Hashtbl.find_opt state.tags_removed webid with
+    | Some ts ->
+        ts
+    | None ->
+        []
+  in
+  let new_tags =
+    List.fold_left
+      (fun acc t -> if List.mem t acc then acc else t :: acc)
+      existing tags
+  in
+  Hashtbl.replace state.tags_removed webid new_tags ;
+  (* Also remove from tags_added if present *)
+  let added =
+    match Hashtbl.find_opt state.tags_added webid with
+    | Some ts ->
+        ts
+    | None ->
+        []
+  in
+  let updated_added = List.filter (fun t -> not (List.mem t tags)) added in
+  if updated_added = [] then Hashtbl.remove state.tags_added webid
+  else Hashtbl.replace state.tags_added webid updated_added ;
+  bump_update_entries ()

@@ -8,14 +8,49 @@ open Nav
 module Msg = Elfeed_shared.Elfeed_message
 open Brr_lwd
 
+let get_query () =
+  let q_el = get_element_by_id_exn "q" in
+  El.prop El.Prop.value q_el |> Jstr.trim
+
+let entries_doc = Lwd.get State.update_entries |> Lwd.map ~f:(fun _ -> ())
+
+let update_entries () =
+  let root = Lwd.observe entries_doc in
+  let render () =
+    Lwd.quick_sample root ;
+    let webids_to_update =
+      (State.state.tags_removed |> Hashtbl.to_seq_keys |> List.of_seq)
+      @ (State.state.tags_added |> Hashtbl.to_seq_keys |> List.of_seq)
+      @ State.state.results
+    in
+    (* Update entry state *)
+    webids_to_update
+    |> List.map (fun webid -> Hashtbl.find State.state.entries webid)
+    |> List.map (Entry.update_entry_tags ~state:State.state)
+    |> List.iter (fun (e : State.entry) ->
+        Hashtbl.replace State.state.entries e.webid e ) ;
+    (* Re-filter results based on updated tags and current query *)
+    let query = get_query () |> Jstr.to_string in
+    let updated_entries =
+      State.state.results
+      |> List.map (fun webid -> Hashtbl.find State.state.entries webid)
+      |> Offline_search.filter_results ~query
+      |> List.map (fun (e : State.entry) -> e.webid)
+    in
+    State.state.results <- updated_entries ;
+    (* Trigger a rerender of the UI components *)
+    State.bump_epoch ()
+  in
+  Lwd.set_on_invalidate root render ;
+  render ()
+
 let results_sidebar_doc : Elwd.t Lwd.t =
   let children : El.t Lwd_seq.t Lwd.t =
     Lwd.get State.epoch_v
     |> Lwd.map ~f:(fun _ ->
         State.state.results
-        |> List.map (fun webid ->
-            let entry = Hashtbl.find State.state.entries webid in
-            Entry.make_entry entry )
+        |> List.map (fun webid -> Hashtbl.find State.state.entries webid)
+        |> List.map (fun entry -> Entry.make_entry entry)
         |> Lwd_seq.of_list )
   in
   (* container for results; children are reactive *)
@@ -27,10 +62,6 @@ let mount_into (host : El.t) (doc : Elwd.t Lwd.t) =
   Lwd.set_on_invalidate root (fun _ ->
       G.request_animation_frame (fun _ -> render ()) |> ignore ) ;
   render ()
-
-let get_query () =
-  let q_el = get_element_by_id_exn "q" in
-  El.prop El.Prop.value q_el |> Jstr.trim
 
 let prefetch_top_n ?(n = 30) _click_evt =
   let container = Sw.Container.of_navigator G.navigator in
@@ -65,7 +96,7 @@ let confirm_cache_delete _click_evt =
         set_status "No service worker found."
   else ()
 
-let update_app_state ~use_offline_search data =
+let update_app_state data =
   let _entries =
     data |> Jv.to_jv_list
     |> List.filter (Jv.has "content")
@@ -74,14 +105,9 @@ let update_app_state ~use_offline_search data =
   List.iter
     (fun (e : State.entry) -> Hashtbl.replace State.state.entries e.webid e)
     _entries ;
-  let q_el = get_element_by_id_exn "q" in
-  let query = El.prop El.Prop.value q_el |> Jstr.to_string in
-  let results =
-    ( if use_offline_search then Offline_search.filter_results ~query _entries
-      else _entries )
-    |> List.map (fun (e : State.entry) -> e.webid)
-  in
-  State.state.results <- results
+  let results = List.map (fun (e : State.entry) -> e.webid) _entries in
+  State.state.results <- results ;
+  State.bump_update_entries ()
 
 let display_results response =
   let open Fut.Result_syntax in
@@ -89,14 +115,12 @@ let display_results response =
   (* NOTE: We are always using offline search, since we are being cache-first
      now. This means any discrepancies between the two searches are more likely
      to be user visible than before. *)
-  update_app_state ~use_offline_search:true data ;
+  update_app_state data ;
   ( match State.state.selected with
   | Some webid ->
       if not (List.mem webid State.state.results) then close_entry ()
   | None ->
       () ) ;
-  (* Trigger a rerender of the sidebar *)
-  State.bump_epoch () ;
   let n = List.length State.state.results in
   let status = "found " ^ string_of_int n ^ " items" in
   set_status status ; Fut.ok ()
@@ -166,25 +190,28 @@ let on_message e =
     | Cache_cleared status ->
         if status then set_status "Offline cache cleared."
         else set_status "Failed to clear offline cache."
-    | Prefetch_request _ | Delete_cache ->
+    | Offline_tags updates ->
+        List.iter
+          (fun {Msg.webid; tags; action} ->
+            match action with
+            | `Add ->
+                State.add_tags webid tags
+            | `Remove ->
+                State.remove_tags webid tags )
+          updates ;
+        State.bump_update_entries ()
+    | Prefetch_request _ | Delete_cache | Tag_update _ ->
         Console.warn
-          [Jv.of_string "Received unexpected PREFETCH_REQUEST message"] ;
+          [Jv.of_string "Received unexpected message from SW in app.ml"; data] ;
         ()
   with Msg.Parse_error _ ->
     Console.log [Jv.of_string "Failed to parse message received in app.ml"; data]
 
 let mark_all_as_read _ =
-  let data =
-    Jv.obj
-      [| ("entries", State.state.results |> Jv.of_list Jv.of_string)
-       ; ("remove", [Jstr.of_string "unread"] |> Jv.of_jstr_list) |]
-  in
-  Api.update_tag_data data
-    (fun status ->
-      if status = 202 then
-        set_status (Printf.sprintf "Tags will be updated when online")
-      else search () )
-    (fun () -> set_status "Failed to mark all as read!")
+  List.iter
+    (fun webid -> State.remove_tags webid ["unread"])
+    State.state.results ;
+  State.bump_update_entries ()
 
 let confirm_mark_all_as_read evt =
   Ev.prevent_default evt ;
@@ -276,6 +303,7 @@ let () =
   (* Mount sidebar results *)
   let results_el = get_element_by_id_exn "results" in
   mount_into results_el results_sidebar_doc ;
+  update_entries () ;
   (* Initial load *)
   let q_el = get_element_by_id_exn "q" in
   El.set_at At.Name.value (Some (Jstr.of_string "@30-days-old +unread")) q_el ;
