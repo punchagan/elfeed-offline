@@ -81,9 +81,7 @@ let update_app_state ~use_offline_search data =
       else _entries )
     |> List.map (fun (e : State.entry) -> e.webid)
   in
-  State.state.results <- results ;
-  (* Trigger a rerender of the sidebar *)
-  State.bump_epoch ()
+  State.state.results <- results
 
 let display_results response =
   let open Fut.Result_syntax in
@@ -95,9 +93,10 @@ let display_results response =
   ( match State.state.selected with
   | Some webid ->
       if not (List.mem webid State.state.results) then close_entry ()
-      else render_nav ()
   | None ->
       () ) ;
+  (* Trigger a rerender of the sidebar *)
+  State.bump_epoch () ;
   let n = List.length State.state.results in
   let status = "found " ^ string_of_int n ^ " items" in
   set_status status ; Fut.ok ()
@@ -281,4 +280,4 @@ let () =
   let q_el = get_element_by_id_exn "q" in
   El.set_at At.Name.value (Some (Jstr.of_string "@30-days-old +unread")) q_el ;
   search () ;
-  render_nav ()
+  State.bump_epoch ()

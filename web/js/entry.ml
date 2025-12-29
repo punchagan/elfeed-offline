@@ -164,7 +164,7 @@ let make_entry (data : State.entry) =
         (* Set reading mode *)
         Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
         State.state.selected <- Some data.webid ;
-        Nav.render_nav () )
+        State.bump_epoch () )
       (El.as_target entry)
   in
   entry

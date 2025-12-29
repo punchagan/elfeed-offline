@@ -3,6 +3,7 @@ open Util
 open Api
 module Clipboard = Brr_io.Clipboard
 open State
+open Brr_lwd
 
 let status_msg = ref ""
 
@@ -80,6 +81,18 @@ let render_nav_status () =
       El.set_at At.Name.class' (Some (Jstr.v "set")) status_el )
   |> ignore
 
+(* HACK: To reuse the existing navbar in the HTML *)
+let navbar_doc = Lwd.get State.epoch_v |> Lwd.map ~f:(fun _ -> ())
+
+let hook_render_nav doc =
+  let root = Lwd.observe doc in
+  let render () =
+    Lwd.quick_sample root ; render_nav () ; render_nav_status ()
+  in
+  Lwd.set_on_invalidate root (fun _ ->
+      G.request_animation_frame (fun _ -> render ()) |> ignore ) ;
+  render ()
+
 let tag_update_success status =
   let msg =
     (* Request has been cached by service worker *)
@@ -132,10 +145,11 @@ let close_entry _ =
   El.set_at At.Name.src (Some (Jstr.v "about:blank")) content_el ;
   state.selected <- None ;
   status_msg := "" ;
-  render_nav () ;
-  render_nav_status ()
+  State.bump_epoch ()
 
 let setup_nav_handlers () =
+  (* Hook up render to navbar_doc *)
+  hook_render_nav navbar_doc ;
   (* Hook up back-btn click handler *)
   let back_btn_el = get_element_by_id_exn "back" in
   Ev.listen Ev.click close_entry (El.as_target back_btn_el) |> ignore ;
