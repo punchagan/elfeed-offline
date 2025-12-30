@@ -8,10 +8,6 @@ open Nav
 module Msg = Elfeed_shared.Elfeed_message
 open Brr_lwd
 
-let get_query () =
-  let q_el = get_element_by_id_exn "q" in
-  El.prop El.Prop.value q_el |> Jstr.trim
-
 let entries_doc = Lwd.get State.update_entries |> Lwd.map ~f:(fun _ -> ())
 
 let update_entries () =
@@ -244,16 +240,14 @@ let search_add_remove_starred evt =
   let current_q = El.prop El.Prop.value q_el in
   let text = Jstr.v "+starred" in
   let new_q = add_or_remove_substring current_q text in
-  El.set_prop El.Prop.value new_q q_el ;
-  search ()
+  set_query new_q ; search ()
 
 let search_add_remove_unread evt =
   let q_el = get_element_by_id_exn "q" in
   let current_q = El.prop El.Prop.value q_el in
   let text = Jstr.v "+unread" in
   let new_q = add_or_remove_substring current_q text in
-  El.set_prop El.Prop.value new_q q_el ;
-  search ()
+  set_query new_q ; search ()
 
 let setup_handlers () =
   (* Hook up search-form submit event handler *)

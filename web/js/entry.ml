@@ -20,8 +20,7 @@ let search_add_remove_tag evt =
   let q_el = Util.get_element_by_id_exn "q" in
   let current_q = El.prop El.Prop.value q_el in
   let new_q = Util.add_or_remove_substring current_q tag_text in
-  El.set_prop El.Prop.value new_q q_el ;
-  Util.submit_search_form ()
+  Util.set_query new_q ; Util.submit_search_form ()
 
 let search_add_remove_feed_url evt =
   Ev.prevent_default evt ;
@@ -40,8 +39,7 @@ let search_add_remove_feed_url evt =
       let q_el = Util.get_element_by_id_exn "q" in
       let current_q = El.prop El.Prop.value q_el in
       let new_q = Util.add_or_remove_substring current_q search_text in
-      El.set_prop El.Prop.value new_q q_el ;
-      Util.submit_search_form ()
+      Util.set_query new_q ; Util.submit_search_form ()
 
 let entry_of_jv e : State.entry =
   let title = Jv.get e "title" |> Jv.to_string in

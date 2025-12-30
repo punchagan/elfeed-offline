@@ -33,3 +33,11 @@ let submit_search_form () =
   let submit_event = Ev.create submit in
   let form_el = get_element_by_id_exn "search-form" in
   Ev.dispatch submit_event (El.as_target form_el) |> ignore
+
+let get_query () =
+  let q_el = get_element_by_id_exn "q" in
+  El.prop El.Prop.value q_el |> Jstr.trim
+
+let set_query q =
+  let q_el = get_element_by_id_exn "q" in
+  El.set_prop El.Prop.value q q_el
