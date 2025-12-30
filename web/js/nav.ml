@@ -1,6 +1,5 @@
 open Brr
 open Util
-open Api
 module Clipboard = Brr_io.Clipboard
 open State
 open Brr_lwd

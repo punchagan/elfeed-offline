@@ -20,5 +20,5 @@
 ; Library for the web app to allow testing
 (library
  (name elfeed_offline_web)
- (modules offline_search state util entry icons nav api util)
+ (modules offline_search state util entry icons nav util)
  (libraries brr astring str ptime ptime.clock uri elfeed_shared lwd brr-lwd))
