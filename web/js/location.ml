@@ -20,7 +20,11 @@ let set_state_from_location_hash () =
 
 let set_location_hash () =
   let location = G.window |> Window.location in
-  let fragments_assoc = [(Jstr.v "q", Jstr.v State.state.search_query)] in
+  let fragments_assoc =
+    if State.state.search_query <> "" then
+      [(Jstr.v "q", Jstr.v State.state.search_query)]
+    else []
+  in
   let fragments =
     ( match State.state.selected with
       | Some webid ->
