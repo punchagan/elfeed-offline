@@ -34,6 +34,11 @@ let set_open_original (href_opt : Jstr.t option) =
       El.set_class (Jstr.v "muted") true link_el ;
       El.set_at (Jstr.v "aria-disabled") (Some (Jstr.v "true")) link_el
 
+let set_iframe_location_replace (el : El.t) (url : Jstr.t) =
+  let win = Jv.get (El.to_jv el) "contentWindow" in
+  let loc = Jv.get win "location" in
+  ignore @@ Jv.call loc "replace" [|Jv.of_jstr url|]
+
 let render_nav () =
   let mark_read_btn = get_element_by_id_exn "mark-read" in
   let mark_unread_btn = get_element_by_id_exn "mark-unread" in
@@ -56,8 +61,7 @@ let render_nav () =
       | None ->
           ()
       | Some entry ->
-          (* HACK: Set IFrame source if not set! Allows loading page with
-             initial non-empty selection *)
+          (* Set IFrame source if required *)
           let content_el = get_element_by_id_exn "content" in
           let current_src = El.at At.Name.src content_el in
           let content_url =
@@ -67,7 +71,7 @@ let render_nav () =
           | Some old_src when old_src = content_url ->
               ()
           | _ ->
-              El.set_at At.Name.src (Some content_url) content_el ) ;
+              set_iframe_location_replace content_el content_url ) ;
           (* Show the entry-nav section *)
           set_button_visible entry_nav_el true ;
           (* Read/Unread buttons *)

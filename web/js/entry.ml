@@ -154,11 +154,6 @@ let make_entry (data : State.entry) =
   let _ =
     Ev.listen Ev.click
       (fun _ ->
-        let content_el = Util.get_element_by_id_exn "content" in
-        let content_hash = data.content_hash in
-        let content_url = Printf.sprintf "/elfeed/content/%s" content_hash in
-        (* Set src of IFrame *)
-        El.set_at At.Name.src (Some (Jstr.v content_url)) content_el ;
         (* Set reading mode *)
         Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
         Console.log [Jv.of_string "Selected entry"; Jv.of_string data.webid] ;
