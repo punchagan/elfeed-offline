@@ -50,27 +50,44 @@ let render_nav () =
       set_button_visible entry_nav_el false ;
       set_text title_el "" ;
       set_text feed_el ""
-  | Some s ->
-      set_button_visible entry_nav_el true ;
-      (* Read/Unread buttons *)
-      set_button_enabled mark_read_btn true ;
-      set_button_enabled mark_unread_btn true ;
-      let entry = Hashtbl.find state.entries s in
-      set_button_visible mark_read_btn entry.is_unread ;
-      set_button_visible mark_unread_btn (not entry.is_unread) ;
-      (* Star/Unstar buttons *)
-      set_button_enabled star_btn (not entry.is_starred) ;
-      set_button_enabled unstar_btn entry.is_starred ;
-      set_button_visible star_btn (not entry.is_starred) ;
-      set_button_visible unstar_btn entry.is_starred ;
-      (* Other buttons *)
-      set_button_enabled back_btn_el true ;
-      set_button_enabled copy_url_btn true ;
-      let title = entry.title in
-      set_text title_el title ;
-      let feed = entry.feed.title in
-      set_text feed_el feed ;
-      set_open_original (Some (Jstr.v entry.link))
+  | Some s -> (
+      let entry = Hashtbl.find_opt state.entries s in
+      match entry with
+      | None ->
+          ()
+      | Some entry ->
+          (* HACK: Set IFrame source if not set! Allows loading page with
+             initial non-empty selection *)
+          let content_el = get_element_by_id_exn "content" in
+          let current_src = El.at At.Name.src content_el in
+          let content_url =
+            Printf.sprintf "/elfeed/content/%s" entry.content_hash |> Jstr.v
+          in
+          ( match current_src with
+          | Some old_src when old_src = content_url ->
+              ()
+          | _ ->
+              El.set_at At.Name.src (Some content_url) content_el ) ;
+          (* Show the entry-nav section *)
+          set_button_visible entry_nav_el true ;
+          (* Read/Unread buttons *)
+          set_button_enabled mark_read_btn true ;
+          set_button_enabled mark_unread_btn true ;
+          set_button_visible mark_read_btn entry.is_unread ;
+          set_button_visible mark_unread_btn (not entry.is_unread) ;
+          (* Star/Unstar buttons *)
+          set_button_enabled star_btn (not entry.is_starred) ;
+          set_button_enabled unstar_btn entry.is_starred ;
+          set_button_visible star_btn (not entry.is_starred) ;
+          set_button_visible unstar_btn entry.is_starred ;
+          (* Other buttons *)
+          set_button_enabled back_btn_el true ;
+          set_button_enabled copy_url_btn true ;
+          let title = entry.title in
+          set_text title_el title ;
+          let feed = entry.feed.title in
+          set_text feed_el feed ;
+          set_open_original (Some (Jstr.v entry.link)) )
 
 let render_nav_status () =
   let status_el = get_element_by_id_exn "nav-status" in

@@ -40,4 +40,5 @@ let get_query () =
 
 let set_query q =
   let q_el = get_element_by_id_exn "q" in
-  El.set_prop El.Prop.value q q_el
+  El.set_prop El.Prop.value q q_el ;
+  State.state.search_query <- Jstr.to_string q

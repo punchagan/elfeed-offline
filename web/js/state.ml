@@ -19,13 +19,15 @@ type model =
   { mutable entries: entry_map
   ; mutable results: string list
   ; mutable selected: string option
+  ; mutable search_query: string
   ; mutable tags_added: tag_map
   ; mutable tags_removed: tag_map }
 
 let state =
-  { results= []
+  { entries= Hashtbl.create 30
+  ; results= []
   ; selected= None
-  ; entries= Hashtbl.create 30
+  ; search_query= "@30-days-ago +unread"
   ; tags_added= Hashtbl.create 10
   ; tags_removed= Hashtbl.create 10 }
 

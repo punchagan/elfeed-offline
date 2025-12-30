@@ -250,6 +250,23 @@ let search_add_remove_unread evt =
   set_query new_q ; search ()
 
 let setup_handlers () =
+  (* Hook up changes to q input *)
+  let q_el = get_element_by_id_exn "q" in
+  Ev.listen Ev.change
+    (fun _e ->
+      let q = El.prop El.Prop.value q_el |> Jstr.trim in
+      State.state.search_query <- Jstr.to_string q )
+    (El.as_target q_el)
+  |> ignore ;
+  (* Hook up hashchange so that history works correctly *)
+  Ev.listen Ev.hashchange
+    (fun _e ->
+      Console.log [Jv.of_string "hashchange event"] ;
+      Location.set_state_from_location_hash () ;
+      Util.set_query (Jstr.of_string State.state.search_query) ;
+      search () )
+    (Window.as_target G.window)
+  |> ignore ;
   (* Hook up search-form submit event handler *)
   let form_el = get_element_by_id_exn "search-form" in
   let submit = Ev.Type.create (Jstr.v "submit") in
@@ -297,9 +314,13 @@ let () =
   (* Mount sidebar results *)
   let results_el = get_element_by_id_exn "results" in
   mount_into results_el results_sidebar_doc ;
+  (* Hook up entries updates *)
   update_entries () ;
+  (* Set state from URL params *)
+  Location.set_state_from_location_hash () ;
+  Location.hook_location_update () ;
   (* Initial load *)
   let q_el = get_element_by_id_exn "q" in
-  El.set_at At.Name.value (Some (Jstr.of_string "@30-days-old +unread")) q_el ;
+  El.set_at At.Name.value (Some (Jstr.of_string State.state.search_query)) q_el ;
   search () ;
   State.bump_epoch ()
