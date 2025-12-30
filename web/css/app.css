@@ -25,6 +25,11 @@ header h1 {
     margin: 0;
     font-size: 18px;
 }
+h1 a,
+h1 a:visited {
+    text-decoration: none;
+    color: inherit;
+}
 search {
     padding: 1em;
     border-right: 1px solid #ccc;
