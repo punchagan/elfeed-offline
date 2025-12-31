@@ -21,7 +21,8 @@ type model =
   ; mutable selected: string option
   ; mutable search_query: string
   ; mutable tags_added: tag_map
-  ; mutable tags_removed: tag_map }
+  ; mutable tags_removed: tag_map
+  ; mutable online: bool }
 
 let state =
   { entries= Hashtbl.create 30
@@ -29,7 +30,8 @@ let state =
   ; selected= None
   ; search_query= "@30-days-ago +unread"
   ; tags_added= Hashtbl.create 10
-  ; tags_removed= Hashtbl.create 10 }
+  ; tags_removed= Hashtbl.create 10
+  ; online= true }
 
 (* Reactive state *)
 

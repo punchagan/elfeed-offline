@@ -22,5 +22,5 @@
 
 (library
  (name elfeed_offline_web)
- (modules offline_search state util entry icons nav util location)
+ (modules offline_search state util entry icons nav util location heartbeat)
  (libraries brr astring str ptime ptime.clock uri elfeed_shared lwd brr-lwd))

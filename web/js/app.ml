@@ -60,19 +60,13 @@ let mount_into (host : El.t) (doc : Elwd.t Lwd.t) =
   render ()
 
 let prefetch_top_n ?(n = 30) _click_evt =
-  let container = Sw.Container.of_navigator G.navigator in
-  match Sw.Container.controller container with
-  | Some w ->
-      let worker = Sw.as_worker w in
-      let hashes =
-        State.state.results |> List.take n
-        |> List.map (fun webid ->
-            Hashtbl.find State.state.entries webid |> fun e -> e.content_hash )
-      in
-      let msg = Msg.Prefetch_request {hashes} |> Msg.to_jv in
-      Brr_webworkers.Worker.post worker msg
-  | None ->
-      set_status "No service worker found."
+  let hashes =
+    State.state.results |> List.take n
+    |> List.map (fun webid ->
+        Hashtbl.find State.state.entries webid |> fun e -> e.content_hash )
+  in
+  if Msg.request_prefetch hashes then ()
+  else set_status "No service worker found."
 
 let confirm_cache_delete _click_evt =
   let confirm = Jv.get Jv.global "confirm" in
@@ -319,6 +313,8 @@ let () =
   (* Set state from URL params *)
   Location.set_state_from_location_hash () ;
   Location.hook_location_update () ;
+  (* Setup heartbeat *)
+  Heartbeat.heartbeat () ;
   (* Initial load *)
   let q_el = get_element_by_id_exn "q" in
   El.set_at At.Name.value (Some (Jstr.of_string State.state.search_query)) q_el ;

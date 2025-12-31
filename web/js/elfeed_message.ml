@@ -1,4 +1,5 @@
 open Brr
+module Sw = Brr_webworkers.Service_worker
 
 type tag_update = {webid: string; tags: string list; action: [`Add | `Remove]}
 
@@ -130,3 +131,14 @@ let of_jv (v : Jv.t) : t =
       Offline_tags updates
   | x ->
       raise (Parse_error x)
+
+let request_prefetch hashes =
+  let container = Sw.Container.of_navigator G.navigator in
+  match Sw.Container.controller container with
+  | Some w ->
+      let worker = Sw.as_worker w in
+      let msg = Prefetch_request {hashes} |> to_jv in
+      Brr_webworkers.Worker.post worker msg ;
+      true
+  | None ->
+      false
