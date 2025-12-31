@@ -20,6 +20,8 @@ module Config = struct
     ["/"; "/index.html"; "/manifest.webmanifest"; "/css/app.css"; "/js/app.js"]
     |> List.map Jstr.v
 
+  let default_query = "@30-days-ago +unread"
+
   let alternate_query = "@999-days-old"
 end
 
@@ -140,6 +142,35 @@ module Prefetch = struct
      overloading the server during a user action. *)
   let delay_ms = 5000
 
+  let clear_other_cache_keys () =
+    let keep_keys = [Config.default_query; Config.alternate_query] in
+    let open Fut.Result_syntax in
+    let storage = Fetch.caches () in
+    let* cache = Cache_storage.open' storage Config.c_content in
+    let* keys = Cache.keys cache in
+    let old_keys =
+      List.filter
+        (fun k ->
+          let uri = Uri.of_jstr (Fetch.Request.url k) |> Result.get_ok in
+          match Uri.path uri |> Jstr.to_string with
+          | "/elfeed/search" -> (
+              let query_params = Uri.query_params uri in
+              let search_query_opt =
+                Uri.Params.find (Jstr.v "q") query_params
+              in
+              match search_query_opt with
+              | None ->
+                  false
+              | Some q ->
+                  let q = q |> Jstr.trim |> Jstr.to_string in
+                  not (List.mem q keep_keys) )
+          | _ ->
+              false )
+        keys
+    in
+    List.iter (fun k -> Cache.delete cache k |> ignore) old_keys ;
+    Fut.ok ()
+
   let alternate_search_req () =
     let q_param =
       Config.alternate_query |> Jstr.v |> Uri.encode_component |> Result.get_ok
@@ -216,6 +247,7 @@ module Prefetch = struct
             prefetch_content ~notify:false hashes ;
             Fut.ok ()
           in
+          clear_other_cache_keys () |> ignore ;
           Console.log [Jv.of_string "Prefetched alternate search content."]
       | Error e ->
           Console.log
