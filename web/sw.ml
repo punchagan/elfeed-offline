@@ -19,6 +19,8 @@ module Config = struct
   let shell =
     ["/"; "/index.html"; "/manifest.webmanifest"; "/css/app.css"; "/js/app.js"]
     |> List.map Jstr.v
+
+  let alternate_query = "@999-days-old"
 end
 
 (** Helpers to return content by strategy  *)
@@ -132,8 +134,6 @@ module Notify = struct
 end
 
 module Prefetch = struct
-  let alternate_search_param = "@999-days-old"
-
   let concurrency = 4
 
   (* Delay before firing prefetch_alternate_search_with_content to prevent
@@ -142,7 +142,7 @@ module Prefetch = struct
 
   let alternate_search_req () =
     let q_param =
-      alternate_search_param |> Jstr.v |> Uri.encode_component |> Result.get_ok
+      Config.alternate_query |> Jstr.v |> Uri.encode_component |> Result.get_ok
     in
     Jstr.append (Jstr.v "/elfeed/search?q=") q_param |> Fetch.Request.v
 
