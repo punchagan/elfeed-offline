@@ -34,12 +34,12 @@ let set_open_original (href_opt : Jstr.t option) =
       El.set_class (Jstr.v "muted") true link_el ;
       El.set_at (Jstr.v "aria-disabled") (Some (Jstr.v "true")) link_el
 
-let replace_iframe_location (el : El.t) (url : Jstr.t) =
+let replace_iframe_location (el : El.t) (path : Jstr.t) =
   let win = Jv.get (El.to_jv el) "contentWindow" in
   let loc = Jv.get win "location" in
-  let href = Jv.get loc "href" in
-  if not (Jstr.equal (Jv.to_jstr href) url) then
-    ignore @@ Jv.call loc "replace" [|Jv.of_jstr url|]
+  let pathname = Jv.get loc "pathname" in
+  if not (Jstr.equal (Jv.to_jstr pathname) path) then
+    ignore @@ Jv.call loc "replace" [|Jv.of_jstr path|]
 
 let render_nav () =
   let mark_read_btn = get_element_by_id_exn "mark-read" in
