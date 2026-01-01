@@ -212,6 +212,7 @@ let mark_all_as_read _ =
   List.iter
     (fun webid -> State.remove_tags webid ["unread"])
     State.state.results ;
+  post_tags_update () ;
   State.bump_update_entries ()
 
 let confirm_mark_all_as_read evt =
