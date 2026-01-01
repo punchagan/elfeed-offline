@@ -47,7 +47,7 @@ let render_nav () =
   let star_btn = get_element_by_id_exn "star-entry" in
   let unstar_btn = get_element_by_id_exn "unstar-entry" in
   let copy_url_btn = get_element_by_id_exn "copy-url" in
-  let back_btn_el = get_element_by_id_exn "back" in
+  let close_btn_el = get_element_by_id_exn "close-entry" in
   let title_el = get_element_by_id_exn "nav-title" in
   let feed_el = get_element_by_id_exn "nav-feed" in
   let entry_nav_el = get_element_by_id_exn "entry-nav" in
@@ -82,7 +82,7 @@ let render_nav () =
           set_button_visible star_btn (not entry.is_starred) ;
           set_button_visible unstar_btn entry.is_starred ;
           (* Other buttons *)
-          set_button_enabled back_btn_el true ;
+          set_button_enabled close_btn_el true ;
           set_button_enabled copy_url_btn true ;
           let title = entry.title in
           set_text title_el title ;
@@ -176,9 +176,9 @@ let close_entry _ =
 let setup_nav_handlers () =
   (* Hook up render to navbar_doc *)
   hook_render_nav navbar_doc ;
-  (* Hook up back-btn click handler *)
-  let back_btn_el = get_element_by_id_exn "back" in
-  Ev.listen Ev.click close_entry (El.as_target back_btn_el) |> ignore ;
+  (* Hook up close-btn click handler *)
+  let close_btn_el = get_element_by_id_exn "close-entry" in
+  Ev.listen Ev.click close_entry (El.as_target close_btn_el) |> ignore ;
   (* Hook up mark-as-read handler *)
   let mark_read_btn_el = get_element_by_id_exn "mark-read" in
   Ev.listen Ev.click
