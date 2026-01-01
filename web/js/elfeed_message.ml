@@ -16,6 +16,7 @@ type t =
   | Prefetch_request of {hashes: string list}
   | Delete_cache (* Only support clearing "all" cached content  *)
   | Tag_update of tag_update list
+  | Offline_tags_request
 
 exception Parse_error of string
 
@@ -40,6 +41,8 @@ let type_ = function
       "TAG_UPDATE"
   | Offline_tags _ ->
       "OFFLINE_TAGS"
+  | Offline_tags_request ->
+      "OFFLINE_TAGS_REQUEST"
 
 let tag_update_to_jv {webid; tags; action} =
   let u = Jv.obj [||] in
@@ -99,6 +102,8 @@ let to_jv m =
       let jv_updates = updates |> List.map tag_update_to_jv in
       Jv.set o "updates" (Jv.of_jv_list jv_updates) ;
       o
+  | Offline_tags_request ->
+      o
 
 let of_jv (v : Jv.t) : t =
   match Jv.get v "type" |> Jv.to_string with
@@ -129,6 +134,8 @@ let of_jv (v : Jv.t) : t =
       let updates_jv = Jv.get v "updates" |> Jv.to_jv_list in
       let updates = updates_jv |> List.map tag_update_of_jv in
       Offline_tags updates
+  | "OFFLINE_TAGS_REQUEST" ->
+      Offline_tags_request
   | x ->
       raise (Parse_error x)
 

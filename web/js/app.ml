@@ -86,6 +86,17 @@ let confirm_cache_delete _click_evt =
         set_status "No service worker found."
   else ()
 
+let request_offline_tags () =
+  let container = Sw.Container.of_navigator G.navigator in
+  match Sw.Container.controller container with
+  | Some w ->
+      let worker = Sw.as_worker w in
+      let msg = Msg.Offline_tags_request |> Msg.to_jv in
+      Brr_webworkers.Worker.post worker msg
+  | None ->
+      Console.log
+        [Jv.of_string "No service worker found when requesting offline tags."]
+
 let update_app_state data =
   let _entries =
     data |> Jv.to_jv_list
@@ -190,7 +201,7 @@ let on_message e =
                 State.remove_tags webid tags )
           updates ;
         State.bump_update_entries ()
-    | Prefetch_request _ | Delete_cache | Tag_update _ ->
+    | Prefetch_request _ | Delete_cache | Tag_update _ | Offline_tags_request ->
         Console.warn
           [Jv.of_string "Received unexpected message from SW in app.ml"; data] ;
         ()
@@ -315,6 +326,7 @@ let () =
   Location.hook_location_update () ;
   (* Setup heartbeat *)
   Heartbeat.heartbeat () ;
+  request_offline_tags () ;
   (* Initial load *)
   let q_el = get_element_by_id_exn "q" in
   El.set_at At.Name.value (Some (Jstr.of_string State.state.search_query)) q_el ;

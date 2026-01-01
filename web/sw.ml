@@ -493,12 +493,18 @@ let on_message e =
               Notify.notify_all (Cache_cleared false) |> ignore )
     | Tag_update updates ->
         Tags.persist_tag_updates_and_sync updates |> ignore
+    | Offline_tags_request ->
+        Tags.notify_pending_updates ()
     | _ ->
         Console.warn [Jv.of_string "Received unexpected message type"] ;
         ()
-  with Msg.Parse_error _ ->
-    Console.warn [Jv.of_string "Failed to parse message in SW"] ;
-    ()
+  with
+  | Msg.Parse_error _ ->
+      Console.warn [Jv.of_string "Failed to parse message in SW"] ;
+      ()
+  | e ->
+      Console.error [Jv.of_string "Unknown error while parsing message"; e] ;
+      ()
 
 let () =
   let self = Ev.target_of_jv Jv.global in
