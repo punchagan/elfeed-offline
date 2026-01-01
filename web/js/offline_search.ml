@@ -163,23 +163,25 @@ let entry_matches_filter (entry : State.entry) (filter : Filter.t) : bool =
   let hostname = Uri.host url in
   (* TODO: Currently only allow feed search by hostname *)
   let feeds_ok =
-    List.for_all
-      (fun feed_url ->
-        match hostname with
-        | Some host ->
-            String.equal host feed_url
-        | None ->
-            String.equal entry.feed.url feed_url )
-      filter.feeds
+    List.length filter.feeds = 0
+    || List.exists
+         (fun feed_url ->
+           match hostname with
+           | Some host ->
+               String.equal host feed_url
+           | None ->
+               String.equal entry.feed.url feed_url )
+         filter.feeds
   in
   let not_feeds_ok =
     List.for_all
       (fun feed_url ->
-        match hostname with
-        | Some host ->
-            String.equal host feed_url
-        | None ->
-            String.equal entry.feed.url feed_url )
+        not
+          ( match hostname with
+          | Some host ->
+              String.equal host feed_url
+          | None ->
+              String.equal entry.feed.url feed_url ) )
       filter.not_feeds
   in
   let matches_ok =
