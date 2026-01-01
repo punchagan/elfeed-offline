@@ -267,7 +267,6 @@ let setup_handlers () =
   (* Hook up hashchange so that history works correctly *)
   Ev.listen Ev.hashchange
     (fun _e ->
-      Console.log [Jv.of_string "hashchange event"] ;
       Location.set_state_from_location_hash () ;
       Util.set_query (Jstr.of_string State.state.search_query) ;
       search () )
