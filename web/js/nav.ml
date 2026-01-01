@@ -6,6 +6,13 @@ open Brr_lwd
 
 let status_msg = ref ""
 
+(** This is used to keep track of the index of the currently selected entry to
+    be able to navigate to prev/next entries when the results list changes to
+    exclude the currently selected entry, for instance, the current search
+    results only contain unread items, and the currently selected entry is
+    marked as read. *)
+let saved_index = ref None
+
 let set_button_enabled el enabled =
   let enabled_attr = if enabled then None else Some (Jstr.v "true") in
   El.set_at At.Name.disabled enabled_attr el ;
@@ -48,6 +55,8 @@ let render_nav () =
   let unstar_btn = get_element_by_id_exn "unstar-entry" in
   let copy_url_btn = get_element_by_id_exn "copy-url" in
   let close_btn_el = get_element_by_id_exn "close-entry" in
+  let next_btn_el = get_element_by_id_exn "next-entry" in
+  let prev_btn_el = get_element_by_id_exn "prev-entry" in
   let title_el = get_element_by_id_exn "nav-title" in
   let feed_el = get_element_by_id_exn "nav-feed" in
   let entry_nav_el = get_element_by_id_exn "entry-nav" in
@@ -81,6 +90,25 @@ let render_nav () =
           set_button_enabled unstar_btn entry.is_starred ;
           set_button_visible star_btn (not entry.is_starred) ;
           set_button_visible unstar_btn entry.is_starred ;
+          (* Next/Prev buttons *)
+          let results = state.results in
+          let current_index =
+            List.find_index (fun id -> id = s) state.results
+          in
+          let index_ =
+            if Option.is_some current_index then current_index else !saved_index
+          in
+          ( match index_ with
+          | None ->
+              set_button_enabled next_btn_el false ;
+              set_button_enabled prev_btn_el false
+          | Some index ->
+              if Option.is_some current_index then saved_index := current_index ;
+              if index < List.length results - 1 then
+                set_button_enabled next_btn_el true
+              else set_button_enabled next_btn_el false ;
+              if index > 0 then set_button_enabled prev_btn_el true
+              else set_button_enabled prev_btn_el false ) ;
           (* Other buttons *)
           set_button_enabled close_btn_el true ;
           set_button_enabled copy_url_btn true ;
@@ -170,6 +198,7 @@ let close_entry _ =
   let content_el = get_element_by_id_exn "content" in
   El.set_at At.Name.src (Some (Jstr.v "about:blank")) content_el ;
   state.selected <- None ;
+  saved_index := None ;
   status_msg := "" ;
   State.bump_epoch ()
 
@@ -179,6 +208,55 @@ let setup_nav_handlers () =
   (* Hook up close-btn click handler *)
   let close_btn_el = get_element_by_id_exn "close-entry" in
   Ev.listen Ev.click close_entry (El.as_target close_btn_el) |> ignore ;
+  (* Hook up prev-btn click handler *)
+  let prev_btn_el = get_element_by_id_exn "prev-entry" in
+  Ev.listen Ev.click
+    (fun _ ->
+      match state.selected with
+      | None ->
+          ()
+      | Some webid -> (
+          let results = state.results in
+          let current_index =
+            List.find_index (fun id -> id = webid) state.results
+          in
+          match (current_index, !saved_index) with
+          | Some index, _ | _, Some index ->
+              if index > 0 then (
+                let prev_webid = List.nth results (index - 1) in
+                state.selected <- Some prev_webid ;
+                saved_index := Some (index - 1) ;
+                State.bump_epoch () )
+          | _ ->
+              () ) )
+    (El.as_target prev_btn_el)
+  |> ignore ;
+  (* Hook up next-btn click handler *)
+  let next_btn_el = get_element_by_id_exn "next-entry" in
+  Ev.listen Ev.click
+    (fun _ ->
+      match state.selected with
+      | None ->
+          ()
+      | Some webid -> (
+          let results = state.results in
+          let current_index =
+            List.find_index (fun id -> id = webid) state.results
+          in
+          match (current_index, !saved_index) with
+          | Some index, _ | _, Some index ->
+              if index < List.length results - 1 then (
+                let next_index =
+                  if Option.is_some current_index then index + 1 else index
+                in
+                let next_webid = List.nth results next_index in
+                saved_index := Some next_index ;
+                state.selected <- Some next_webid ;
+                State.bump_epoch () )
+          | _ ->
+              () ) )
+    (El.as_target next_btn_el)
+  |> ignore ;
   (* Hook up mark-as-read handler *)
   let mark_read_btn_el = get_element_by_id_exn "mark-read" in
   Ev.listen Ev.click
