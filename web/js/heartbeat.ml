@@ -4,12 +4,19 @@ module Msg = Elfeed_shared.Elfeed_message
 
 let delay_ms = 60 * 1000 (* Check once every minute *)
 
+let timeout = 5 * 1000 (* 5 second timeout for fetch requests *)
+
 let storage = Storage.local G.window
 
 let key = Jstr.v "lastUpdate"
 
 let rec heartbeat () =
-  let req = "/elfeed/update" |> Jstr.v |> Fetch.Request.v in
+  let signal =
+    let s = Jv.get Jv.global "AbortSignal" in
+    Jv.call s "timeout" [|Jv.of_int timeout|] |> Abort.Signal.of_jv
+  in
+  let init = Fetch.Request.init ~signal () in
+  let req = "/elfeed/update" |> Jstr.v |> Fetch.Request.v ~init in
   Fut.await (Fetch.request req) (fun response ->
       let online_status_el = Util.get_element_by_id_exn "online-offline" in
       ( match response with
