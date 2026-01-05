@@ -1,6 +1,7 @@
 module Proxy = Elfeed_offline.Proxy
 
 let () =
+  let upstream = Uri.of_string "http://127.0.0.1:8080" in
   let certificate_file = "ssl/server.pem" in
   let key_file = "ssl/server.key" in
   if not (Sys.file_exists certificate_file && Sys.file_exists key_file) then
@@ -23,9 +24,9 @@ let () =
   let open Dream in
   let routes =
     [ (* Proxy /elfeed endpoints to the Elfeed server *)
-      get "/elfeed/**" (fun req -> Proxy.forward req `GET)
-    ; put "/elfeed/**" (fun req -> Proxy.forward req `PUT)
-    ; post "/elfeed/**" (fun req -> Proxy.forward req `POST)
+      get "/elfeed/**" (Proxy.forward ~upstream ~method':`GET)
+    ; put "/elfeed/**" (Proxy.forward ~upstream ~method':`PUT)
+    ; post "/elfeed/**" (Proxy.forward ~upstream ~method':`POST)
     ; (* Web stuff *)
       get "/" (fun req -> redirect req "/index.html")
     ; get "/**" (static "./web") ]

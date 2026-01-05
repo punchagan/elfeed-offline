@@ -1,7 +1,5 @@
 open Lwt.Infix
 
-let upstream = Uri.of_string "http://127.0.0.1:8080"
-
 let is_content_uri uri =
   uri |> Uri.path |> String.starts_with ~prefix:"/elfeed/content/"
 
@@ -31,7 +29,7 @@ let wrapped_html html =
 |}
     html
 
-let forward (req : Dream.request) meth =
+let forward ~upstream ~method' (req : Dream.request) =
   let client_uri = Uri.of_string (Dream.target req) in
   let target = Uri.with_path upstream (Uri.path client_uri) in
   let target = Uri.with_query target (Uri.query client_uri) in
@@ -53,7 +51,7 @@ let forward (req : Dream.request) meth =
     (fun () ->
       Cohttp_lwt_unix.Client.call ~headers
         ~body:(Cohttp_lwt.Body.of_string body)
-        meth target
+        method' target
       >>= fun (resp, content) ->
       Cohttp_lwt.Body.to_string content
       >>= fun s ->
