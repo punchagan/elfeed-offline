@@ -19,8 +19,16 @@ let rec heartbeat () =
   let req = "/elfeed/update" |> Jstr.v |> Fetch.Request.v ~init in
   Fut.await (Fetch.request req) (fun response ->
       let online_status_el = Util.get_element_by_id_exn "offline-indicator" in
-      ( match response with
-      | Ok response ->
+      let succesful =
+        match response with
+        | Ok resp ->
+            Fetch.Response.ok resp
+        | Error _ ->
+            false
+      in
+      ( match (succesful, response) with
+      | true, Ok response ->
+          Console.log [Jstr.v "Heartbeat successful"] ;
           El.set_class (Jstr.v "offline") false online_status_el ;
           State.state.online <- true ;
           let open Fut.Result_syntax in
@@ -36,7 +44,15 @@ let rec heartbeat () =
             Fut.ok ()
           in
           ()
-      | Error _ ->
+      | _ ->
+          Console.log [Jstr.v "Heartbeat failed"] ;
+          let msg =
+            if Result.is_ok response then
+              "The Elfeed web (Emacs) server is not responding"
+            else "Elfeed-offline server is not reachable"
+          in
+          let msg_el = Util.get_element_by_id_exn "offline-msg" in
+          Util.set_text msg_el msg ;
           El.set_class (Jstr.v "offline") true online_status_el ;
           State.state.online <- false ) ;
       Fut.await (Fut.tick ~ms:delay_ms) (fun () -> heartbeat ()) ;
