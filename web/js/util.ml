@@ -5,9 +5,13 @@ let add_or_remove_substring s sub =
   | Some pos ->
       (* Remove sub from s *)
       let n = Jstr.length sub in
-      let before = Jstr.sub ~start:0 ~len:pos s in
-      let after = Jstr.sub ~start:(pos + n) ~len:(Jstr.length s - pos - n) s in
-      Jstr.append before after
+      let before = Jstr.sub ~start:0 ~len:pos s |> Jstr.trim in
+      let after =
+        Jstr.sub ~start:(pos + n) ~len:(Jstr.length s - pos - n) s |> Jstr.trim
+      in
+      if Jstr.is_empty before then after
+      else if Jstr.is_empty after then before
+      else Jstr.append before (Jstr.append (Jstr.of_string " ") after)
   | None ->
       (* Add sub to s *)
       if Jstr.is_empty s then sub
