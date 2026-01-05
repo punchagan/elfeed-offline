@@ -18,13 +18,10 @@ let rec heartbeat () =
   let init = Fetch.Request.init ~signal () in
   let req = "/elfeed/update" |> Jstr.v |> Fetch.Request.v ~init in
   Fut.await (Fetch.request req) (fun response ->
-      let online_status_el = Util.get_element_by_id_exn "online-offline" in
+      let online_status_el = Util.get_element_by_id_exn "offline-indicator" in
       ( match response with
       | Ok response ->
-          Jv.set
-            (Brr.El.to_jv online_status_el)
-            "innerHTML"
-            (Jv.of_string Icons.online_icon) ;
+          El.set_class (Jstr.v "offline") false online_status_el ;
           State.state.online <- true ;
           let open Fut.Result_syntax in
           let body = Fetch.Response.as_body response in
@@ -40,10 +37,7 @@ let rec heartbeat () =
           in
           ()
       | Error _ ->
-          Jv.set
-            (Brr.El.to_jv online_status_el)
-            "innerHTML"
-            (Jv.of_string Icons.offline_icon) ;
+          El.set_class (Jstr.v "offline") true online_status_el ;
           State.state.online <- false ) ;
       Fut.await (Fut.tick ~ms:delay_ms) (fun () -> heartbeat ()) ;
       State.bump_epoch () )
