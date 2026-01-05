@@ -67,7 +67,7 @@ main {
     height: calc(100vh - var(--top-section-height));
 }
 #results {
-    overflow: scroll;
+    overflow-y: auto;
     border-right: 1px solid #ccc;
     height: calc(100vh - var(--top-section-height));
 }
