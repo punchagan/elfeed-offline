@@ -34,6 +34,9 @@ let update_entries () =
       |> List.map (fun (e : State.entry) -> e.webid)
     in
     State.state.results <- updated_entries ;
+    let n = List.length State.state.results in
+    let status = "found " ^ string_of_int n ^ " items" in
+    set_status status ;
     (* Trigger a rerender of the UI components *)
     State.bump_epoch ()
   in
@@ -122,9 +125,7 @@ let display_results response =
       if not (List.mem webid State.state.results) then close_entry ()
   | None ->
       () ) ;
-  let n = List.length State.state.results in
-  let status = "found " ^ string_of_int n ^ " items" in
-  set_status status ; Fut.ok ()
+  Fut.ok ()
 
 let do_search () =
   let base = "/elfeed/search?q=" |> Jstr.of_string in
