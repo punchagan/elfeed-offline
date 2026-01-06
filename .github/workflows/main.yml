@@ -1,4 +1,4 @@
-name: Build and test
+name: Build, Test and Deploy Static Site
 
 on: [push, pull_request]
 
@@ -9,6 +9,11 @@ jobs:
         runs-on: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.runs-on }}
 
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -16,3 +21,16 @@ jobs:
         uses: ocaml-dune/setup-dune@v1
         with:
           steps: "install-dune install-depexts build runtest"
+      - name: Generate sample data
+        if: ${{ matrix.runs-on == 'ubuntu-latest' && github.ref == 'refs/heads/main' }}
+        run: |
+          dune exec -- elfeed-offline-generate-sample
+          echo "elfeed-offline.muse-amuse.in" > web/CNAME
+      - name: Upload web/ to GitHub Pages
+        if: ${{ matrix.runs-on == 'ubuntu-latest' && github.ref == 'refs/heads/main' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - name: Deploy
+        if: ${{ matrix.runs-on == 'ubuntu-latest' && github.ref == 'refs/heads/main' }}
+        uses: actions/deploy-pages@v4

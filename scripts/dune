@@ -1,0 +1,6 @@
+;; Generate sample JSON to try out the web interface
+
+(executable
+ (name generate)
+ (public_name elfeed-offline-generate-sample)
+ (libraries unix syndic cohttp-lwt-unix lwt yojson elfeed_offline))

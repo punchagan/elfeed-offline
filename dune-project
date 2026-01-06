@@ -4,6 +4,8 @@
 
 (generate_opam_files true)
 
+(using directory-targets 0.1)
+
 (source
  (github punchagan/elfeed-offline))
 
@@ -43,7 +45,9 @@
   ptime
   astring
   lwd
-  brr-lwd)
+  brr-lwd
+  ;; to generate sample data
+  syndic)
  (tags
   ("elfeed" "rss" "feeds" "PWA" "offline" "proxy" "dream")))
 
