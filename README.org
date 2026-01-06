@@ -2,6 +2,9 @@
 
 Offline reading for Elfeed posts using a Service worker
 
+I wrote a blog post [[https://punchagan.muse-amuse.in/blog/offline-friendly-elfeed-web-ui/][here]] with more details on the motivation to build it and an
+overview of how it works.
+
 ** Installation Instructions
 
 - Configure [[https://github.com/skeeto/elfeed/][Elfeed]] and start the Elfeed web server using ~M-x elfeed-web-start~
