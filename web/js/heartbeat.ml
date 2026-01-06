@@ -47,9 +47,15 @@ let rec heartbeat () =
       | _ ->
           Console.log [Jstr.v "Heartbeat failed"] ;
           let msg =
-            if Result.is_ok response then
-              "The Elfeed web (Emacs) server is not responding"
-            else "Elfeed-offline server is not reachable"
+            if not (Result.is_ok response) then
+              "Elfeed-offline server is not reachable"
+            else
+              let resp = Result.get_ok response in
+              let status = Fetch.Response.status resp in
+              (* HACK for the static site build *)
+              if status = 404 then
+                "Demo of Elfeed-offline UI running without a backend server"
+              else "The Elfeed web (Emacs) server is not responding"
           in
           let msg_el = Util.get_element_by_id_exn "offline-msg" in
           Util.set_text msg_el msg ;
