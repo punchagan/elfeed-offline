@@ -19,7 +19,7 @@ body {
 }
 #offline-indicator.offline {
     display: block;
-    background: #f66;
+    background: rgb(229, 109, 37, 0.75);
     color: white;
     padding: 2px 0px;
     font-size: 9px;
