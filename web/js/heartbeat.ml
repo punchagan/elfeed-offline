@@ -10,6 +10,9 @@ let storage = Storage.local G.window
 
 let key = Jstr.v "lastUpdate"
 
+let set_last_update ts =
+  Storage.set_item storage key (Jstr.v (string_of_float ts)) |> ignore
+
 let rec heartbeat () =
   let signal =
     let s = Jv.get Jv.global "AbortSignal" in
@@ -38,9 +41,7 @@ let rec heartbeat () =
             let old =
               Storage.get_item storage key |> Option.value ~default:(Jstr.v "0")
             in
-            if ts > old then (
-              Storage.set_item storage key ts |> ignore ;
-              Msg.request_prefetch [] |> ignore ) ;
+            if ts > old then Msg.request_prefetch [] |> ignore ;
             Fut.ok ()
           in
           ()

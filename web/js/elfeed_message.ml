@@ -12,7 +12,9 @@ type t =
   | Prefetch_error of {msg: string}
   | Cache_cleared of bool
   | Offline_tags of tag_update list
+  | Set_last_update of {timestamp: float}
   (* Messages from app to SW *)
+  | Prefetch_onload
   | Prefetch_request of {hashes: string list}
   | Delete_cache (* Only support clearing "all" cached content  *)
   | Tag_update of tag_update list
@@ -33,6 +35,8 @@ let type_ = function
       "PREFETCH_ERROR"
   | Prefetch_request _ ->
       "PREFETCH_REQUEST"
+  | Prefetch_onload ->
+      "PREFETCH_ONLOAD"
   | Delete_cache ->
       "DELETE_CACHE"
   | Cache_cleared _ ->
@@ -43,6 +47,8 @@ let type_ = function
       "OFFLINE_TAGS"
   | Offline_tags_request ->
       "OFFLINE_TAGS_REQUEST"
+  | Set_last_update _ ->
+      "SET_LAST_UPDATE"
 
 let tag_update_to_jv {webid; tags; action} =
   let u = Jv.obj [||] in
@@ -89,6 +95,8 @@ let to_jv m =
   | Prefetch_request {hashes} ->
       Jv.set o "hashes" (Jv.of_jstr_list (List.map Jstr.of_string hashes)) ;
       o
+  | Prefetch_onload ->
+      o
   | Delete_cache ->
       o
   | Cache_cleared status ->
@@ -103,6 +111,9 @@ let to_jv m =
       Jv.set o "updates" (Jv.of_jv_list jv_updates) ;
       o
   | Offline_tags_request ->
+      o
+  | Set_last_update {timestamp} ->
+      Jv.set o "timestamp" (Jv.of_float timestamp) ;
       o
 
 let of_jv (v : Jv.t) : t =
@@ -122,6 +133,8 @@ let of_jv (v : Jv.t) : t =
   | "PREFETCH_REQUEST" ->
       Prefetch_request
         {hashes= Jv.get v "hashes" |> Jv.to_jstr_list |> List.map Jstr.to_string}
+  | "PREFETCH_ONLOAD" ->
+      Prefetch_onload
   | "DELETE_CACHE" ->
       Delete_cache
   | "CACHE_CLEARED" ->
@@ -136,6 +149,8 @@ let of_jv (v : Jv.t) : t =
       Offline_tags updates
   | "OFFLINE_TAGS_REQUEST" ->
       Offline_tags_request
+  | "SET_LAST_UPDATE" ->
+      Set_last_update {timestamp= Jv.get v "timestamp" |> Jv.to_float}
   | x ->
       raise (Parse_error x)
 

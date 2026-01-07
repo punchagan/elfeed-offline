@@ -202,7 +202,23 @@ let on_message e =
                 State.remove_tags webid tags )
           updates ;
         State.bump_update_entries ()
-    | Prefetch_request _ | Delete_cache | Tag_update _ | Offline_tags_request ->
+    | Set_last_update {timestamp} -> (
+        Heartbeat.set_last_update timestamp ;
+        match Ptime.of_float_s timestamp with
+        | Some pt ->
+            let fmt = Ptime.to_rfc3339 pt in
+            let msg =
+              Printf.sprintf "Prefetched content from Elfeed last update at %s"
+                fmt
+            in
+            set_status msg
+        | None ->
+            () )
+    | Prefetch_request _
+    | Prefetch_onload
+    | Delete_cache
+    | Tag_update _
+    | Offline_tags_request ->
         Console.warn
           [Jv.of_string "Received unexpected message from SW in app.ml"; data] ;
         ()
