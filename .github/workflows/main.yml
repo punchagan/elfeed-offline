@@ -1,6 +1,11 @@
 name: Build, Test and Deploy Static Site
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -22,15 +27,15 @@ jobs:
         with:
           steps: "install-dune install-depexts build runtest"
       - name: Generate sample data
-        if: ${{ matrix.runs-on == 'ubuntu-latest' && github.ref == 'refs/heads/main' }}
+        if: ${{ matrix.runs-on == 'ubuntu-latest' }}
         run: |
           dune exec -- elfeed-offline-generate-sample
           echo "elfeed-offline.muse-amuse.in" > web/CNAME
       - name: Upload web/ to GitHub Pages
-        if: ${{ matrix.runs-on == 'ubuntu-latest' && github.ref == 'refs/heads/main' }}
+        if: ${{ matrix.runs-on == 'ubuntu-latest' }}
         uses: actions/upload-pages-artifact@v3
         with:
           path: web
       - name: Deploy
-        if: ${{ matrix.runs-on == 'ubuntu-latest' && github.ref == 'refs/heads/main' }}
+        if: ${{ matrix.runs-on == 'ubuntu-latest' }}
         uses: actions/deploy-pages@v4
