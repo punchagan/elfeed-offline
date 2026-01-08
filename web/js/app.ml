@@ -170,6 +170,17 @@ let search () =
           |> Printf.sprintf "Search failed: %s"
           |> set_status
       | _ ->
+          (* Prefetch the content for the entries on every successful search *)
+          Console.log [Jv.of_string "Prefetching content for search results..."] ;
+          let hashes =
+            State.state.results
+            |> List.map (fun webid ->
+                Hashtbl.find State.state.entries webid
+                |> fun e -> e.content_hash )
+          in
+          Msg.request_prefetch ~notify:false ~notify_last_update:false
+            ~prefetch_search:false hashes
+          |> ignore ;
           () )
 
 let on_message e =
