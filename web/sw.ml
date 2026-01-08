@@ -520,6 +520,8 @@ let on_message e =
         Tags.persist_tag_updates_and_sync updates |> ignore
     | Offline_tags_request ->
         Tags.notify_pending_updates ()
+    | Synchronize_tags ->
+        Tags.sync_updates ()
     | Search_update _
     | Prefetch_started _
     | Prefetch_done _

@@ -19,9 +19,15 @@ type t =
       ; notify: bool
       ; prefetch_search: bool
       ; notify_last_update: bool }
-  | Delete_cache (* Only support clearing "all" cached content  *)
+      (** Request the service worker to prefetch entries with given hashes *)
+  | Delete_cache
+      (** Request the service worker to delete all cached content  *)
   | Tag_update of tag_update list
+      (** Update tags stored in the service worker *)
   | Offline_tags_request
+      (** Request the service worker for any stored offline tags*)
+  | Synchronize_tags
+      (** Request the service worker to attempt syncing tags with server*)
 
 exception Parse_error of string
 
@@ -50,6 +56,8 @@ let type_ = function
       "OFFLINE_TAGS_REQUEST"
   | Set_last_update _ ->
       "SET_LAST_UPDATE"
+  | Synchronize_tags ->
+      "SYNCHRONIZE_TAGS"
 
 let tag_update_to_jv {webid; tags; action} =
   let u = Jv.obj [||] in
@@ -117,6 +125,8 @@ let to_jv m =
   | Set_last_update {timestamp} ->
       Jv.set o "timestamp" (Jv.of_float timestamp) ;
       o
+  | Synchronize_tags ->
+      o
 
 let of_jv (v : Jv.t) : t =
   match Jv.get v "type" |> Jv.to_string with
@@ -154,20 +164,25 @@ let of_jv (v : Jv.t) : t =
       Offline_tags_request
   | "SET_LAST_UPDATE" ->
       Set_last_update {timestamp= Jv.get v "timestamp" |> Jv.to_float}
+  | "SYNCHRONIZE_TAGS" ->
+      Synchronize_tags
   | x ->
       raise (Parse_error x)
 
-let request_prefetch ?(notify = true) ?(notify_last_update = false)
-    ?(prefetch_search = false) hashes =
+let send_message msg =
   let container = Sw.Container.of_navigator G.navigator in
   match Sw.Container.controller container with
   | Some w ->
       let worker = Sw.as_worker w in
-      let msg =
-        Prefetch_request {hashes; notify; prefetch_search; notify_last_update}
-        |> to_jv
-      in
+      let msg = msg |> to_jv in
       Brr_webworkers.Worker.post worker msg ;
       true
   | None ->
       false
+
+let request_prefetch ?(notify = true) ?(notify_last_update = false)
+    ?(prefetch_search = false) hashes =
+  let msg =
+    Prefetch_request {hashes; notify; prefetch_search; notify_last_update}
+  in
+  send_message msg

@@ -34,8 +34,12 @@ let rec heartbeat () =
           Console.log [Jstr.v "Heartbeat successful"] ;
           El.set_class (Jstr.v "offline") false online_status_el ;
           State.state.online <- true ;
+          (* Attempt to synchronize tags on every successful heartbeat *)
+          let msg = Msg.Synchronize_tags in
+          Msg.send_message msg |> ignore ;
           let open Fut.Result_syntax in
           let body = Fetch.Response.as_body response in
+          (* Request prefetch for search data, if necessary  *)
           let _ =
             let* ts = Fetch.Body.text body in
             let old =

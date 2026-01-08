@@ -228,7 +228,11 @@ let on_message e =
             set_status msg
         | None ->
             () )
-    | Prefetch_request _ | Delete_cache | Tag_update _ | Offline_tags_request ->
+    | Prefetch_request _
+    | Delete_cache
+    | Tag_update _
+    | Offline_tags_request
+    | Synchronize_tags ->
         Console.warn
           [Jv.of_string "Received unexpected message from SW in app.ml"; data] ;
         ()
