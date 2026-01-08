@@ -41,7 +41,10 @@ let rec heartbeat () =
             let old =
               Storage.get_item storage key |> Option.value ~default:(Jstr.v "0")
             in
-            if ts > old then Msg.request_prefetch [] |> ignore ;
+            if ts > old then
+              Msg.request_prefetch ~notify:false ~notify_last_update:true
+                ~prefetch_search:true []
+              |> ignore ;
             Fut.ok ()
           in
           ()

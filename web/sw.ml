@@ -177,7 +177,7 @@ module Prefetch = struct
     in
     Jstr.append (Jstr.v "/elfeed/search?q=") q_param |> Fetch.Request.v
 
-  let notify_last_update () =
+  let request_last_update_and_notify () =
     let open Fut.Result_syntax in
     let request = Fetch.Request.v (Jstr.v "/elfeed/update") in
     let* response = Fetch.request request in
@@ -186,7 +186,7 @@ module Prefetch = struct
     let msg = Msg.Set_last_update {timestamp= ts} in
     Notify.notify_all msg
 
-  let prefetch_content ?(notify = true) ?(send_last_update = false) hashes =
+  let prefetch_content ?(notify = true) ?(notify_last_update = false) hashes =
     let total = List.length hashes in
     let q = Queue.create () in
     List.iter (fun h -> Queue.push h q) hashes ;
@@ -196,7 +196,7 @@ module Prefetch = struct
     let finish_if_done () =
       if (not !finished) && !running = 0 && Queue.is_empty q then (
         finished := true ;
-        if send_last_update then notify_last_update () |> ignore ;
+        if notify_last_update then request_last_update_and_notify () |> ignore ;
         if notify then
           ( match !done_ with
             | 0 ->
@@ -236,7 +236,7 @@ module Prefetch = struct
     if notify && total = 0 then
       Notify.notify_all (Prefetch_done {total= 0}) |> ignore
 
-  let prefetch_alternate_search_with_content ~send_last_update () =
+  let prefetch_alternate_search_with_content ~notify_last_update () =
     let open Fut.Result_syntax in
     let request = alternate_search_req () in
     let response =
@@ -263,7 +263,7 @@ module Prefetch = struct
                 [ Jv.of_string
                     (Printf.sprintf "Prefetching %d content hashes."
                        (List.length hashes) ) ] ;
-              prefetch_content ~notify:false ~send_last_update hashes ;
+              prefetch_content ~notify:false ~notify_last_update hashes ;
               clear_other_cache_keys () |> ignore ;
               Console.log [Jv.of_string "Prefetched alternate search content."] ;
               Fut.ok ()
@@ -368,8 +368,8 @@ module Tags = struct
     let rec worker () =
       if Queue.is_empty q then (
         notify_pending_updates () ;
-        Prefetch.prefetch_alternate_search_with_content ~send_last_update:false
-          () ;
+        Prefetch.prefetch_alternate_search_with_content
+          ~notify_last_update:false () ;
         () )
       else
         let update = Queue.pop q in
@@ -501,14 +501,14 @@ let on_message e =
   let data = e |> Ev.as_type |> Message.Ev.data in
   try
     match Msg.of_jv data with
-    | Prefetch_onload ->
-        Prefetch.prefetch_alternate_search_with_content ~send_last_update:true
-          ()
-    | Prefetch_request {hashes} ->
-        Prefetch.prefetch_content ~notify:true hashes |> ignore ;
-        Fut.await (Fut.tick ~ms:Prefetch.delay_ms) (fun () ->
-            Prefetch.prefetch_alternate_search_with_content
-              ~send_last_update:false () )
+    | Prefetch_request {hashes; notify; prefetch_search; notify_last_update} ->
+        let n = List.length hashes in
+        if n > 0 then Prefetch.prefetch_content ~notify hashes |> ignore ;
+        if prefetch_search then
+          let delay_ms = if n > 0 then Prefetch.delay_ms else 0 in
+          Fut.await (Fut.tick ~ms:delay_ms) (fun () ->
+              Prefetch.prefetch_alternate_search_with_content
+                ~notify_last_update () )
     | Delete_cache ->
         let storage = Fetch.caches () in
         Fut.await (Cache_storage.delete storage Config.c_content) (function
@@ -520,7 +520,14 @@ let on_message e =
         Tags.persist_tag_updates_and_sync updates |> ignore
     | Offline_tags_request ->
         Tags.notify_pending_updates ()
-    | _ ->
+    | Search_update _
+    | Prefetch_started _
+    | Prefetch_done _
+    | Prefetch_progress _
+    | Prefetch_error _
+    | Cache_cleared _
+    | Offline_tags _
+    | Set_last_update _ ->
         Console.warn [Jv.of_string "Received unexpected message type"] ;
         ()
   with

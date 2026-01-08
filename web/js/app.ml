@@ -68,7 +68,10 @@ let prefetch_top_n ?(n = 30) _click_evt =
     |> List.map (fun webid ->
         Hashtbl.find State.state.entries webid |> fun e -> e.content_hash )
   in
-  if Msg.request_prefetch hashes then ()
+  if
+    Msg.request_prefetch ~notify:true ~notify_last_update:false
+      ~prefetch_search:true hashes
+  then ()
   else set_status "No service worker found."
 
 let confirm_cache_delete _click_evt =
@@ -214,11 +217,7 @@ let on_message e =
             set_status msg
         | None ->
             () )
-    | Prefetch_request _
-    | Prefetch_onload
-    | Delete_cache
-    | Tag_update _
-    | Offline_tags_request ->
+    | Prefetch_request _ | Delete_cache | Tag_update _ | Offline_tags_request ->
         Console.warn
           [Jv.of_string "Received unexpected message from SW in app.ml"; data] ;
         ()

@@ -14,8 +14,11 @@ type t =
   | Offline_tags of tag_update list
   | Set_last_update of {timestamp: float}
   (* Messages from app to SW *)
-  | Prefetch_onload
-  | Prefetch_request of {hashes: string list}
+  | Prefetch_request of
+      { hashes: string list
+      ; notify: bool
+      ; prefetch_search: bool
+      ; notify_last_update: bool }
   | Delete_cache (* Only support clearing "all" cached content  *)
   | Tag_update of tag_update list
   | Offline_tags_request
@@ -35,8 +38,6 @@ let type_ = function
       "PREFETCH_ERROR"
   | Prefetch_request _ ->
       "PREFETCH_REQUEST"
-  | Prefetch_onload ->
-      "PREFETCH_ONLOAD"
   | Delete_cache ->
       "DELETE_CACHE"
   | Cache_cleared _ ->
@@ -92,10 +93,11 @@ let to_jv m =
   | Prefetch_error {msg} ->
       Jv.set o "msg" (Jv.of_string msg) ;
       o
-  | Prefetch_request {hashes} ->
+  | Prefetch_request {hashes; prefetch_search; notify; notify_last_update} ->
       Jv.set o "hashes" (Jv.of_jstr_list (List.map Jstr.of_string hashes)) ;
-      o
-  | Prefetch_onload ->
+      Jv.set o "prefetch_search" (Jv.of_bool prefetch_search) ;
+      Jv.set o "notify" (Jv.of_bool notify) ;
+      Jv.set o "notify_last_update" (Jv.of_bool notify_last_update) ;
       o
   | Delete_cache ->
       o
@@ -132,9 +134,10 @@ let of_jv (v : Jv.t) : t =
       Prefetch_error {msg= Jv.get v "msg" |> Jv.to_string}
   | "PREFETCH_REQUEST" ->
       Prefetch_request
-        {hashes= Jv.get v "hashes" |> Jv.to_jstr_list |> List.map Jstr.to_string}
-  | "PREFETCH_ONLOAD" ->
-      Prefetch_onload
+        { hashes= Jv.get v "hashes" |> Jv.to_jstr_list |> List.map Jstr.to_string
+        ; prefetch_search= Jv.get v "prefetch_search" |> Jv.to_bool
+        ; notify= Jv.get v "notify" |> Jv.to_bool
+        ; notify_last_update= Jv.get v "notify_last_update" |> Jv.to_bool }
   | "DELETE_CACHE" ->
       Delete_cache
   | "CACHE_CLEARED" ->
@@ -154,12 +157,16 @@ let of_jv (v : Jv.t) : t =
   | x ->
       raise (Parse_error x)
 
-let request_prefetch hashes =
+let request_prefetch ?(notify = true) ?(notify_last_update = false)
+    ?(prefetch_search = false) hashes =
   let container = Sw.Container.of_navigator G.navigator in
   match Sw.Container.controller container with
   | Some w ->
       let worker = Sw.as_worker w in
-      let msg = Prefetch_request {hashes} |> to_jv in
+      let msg =
+        Prefetch_request {hashes; notify; prefetch_search; notify_last_update}
+        |> to_jv
+      in
       Brr_webworkers.Worker.post worker msg ;
       true
   | None ->
