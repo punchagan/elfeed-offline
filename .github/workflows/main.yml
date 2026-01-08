@@ -2,8 +2,6 @@ name: Build, Test and Deploy Static Site
 
 on:
   push:
-    branches:
-      - main
   pull_request:
   workflow_dispatch:
 
@@ -22,6 +20,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+      - name: Cache Build Dir
+        id: cache-build-dir
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: ${{ runner.os }}-build-dir
       - name: Use dune
         uses: ocaml-dune/setup-dune@v1
         with:
