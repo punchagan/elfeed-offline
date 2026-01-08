@@ -49,7 +49,7 @@ let parse_query_tests =
       , {OS.Filter.empty with feeds= ["http://example.com/feed"]} )
     ; ( "~http://example.com/feed"
       , {OS.Filter.empty with not_feeds= ["http://example.com/feed"]} )
-    ; ( "@2019-06-20--2019-06-22"
+    ; ( "@2019-06-20--2019-06-24"
       , { OS.Filter.empty with
           after_ms= Some 1560988800000.
         ; before_ms= Some 1561161600000. } )
