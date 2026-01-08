@@ -2,8 +2,6 @@
 
 (name elfeed-offline)
 
-(using directory-targets 0.1)
-
 (source
  (github punchagan/elfeed-offline))
 
