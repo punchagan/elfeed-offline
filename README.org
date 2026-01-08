@@ -20,17 +20,20 @@ overview of how it works.
 
 ** Usage Instructions
 
+- Set ~ELFEED_USERNAME~ and ~ELFEED_PASSWORD~ environment variables to restrict
+  access to yourself.
+
 - Run ~dune exec -- elfeed-offline~ to start the Dream server
 
-- Run the ~scripts/make-cert.sh~ script to create SSL certificates. Required
-  for the service worker to work correctly, when accessing from a different
-  device than the server. Follow the instructions in the script to copy and add
-  the additional certificates to your mobile phone.
+- Run the ~scripts/make-cert.sh~ script to create SSL certificates. This is
+  necessary for the service worker to work correctly, when accessing from a
+  different device than the server. Follow the instructions in the script to
+  copy and add the additional certificates to your mobile phone.
 
 - Access the server in your browser. Use ~https://<hostname>.local:9000~ to
   have everything working even with dynamic IPs.
 
 - Wait for a few seconds to make sure everything is cached in the browser for
-  offline reading. (No UI indicator currently :()
+  offline reading.
 
 - Enjoy reading!
