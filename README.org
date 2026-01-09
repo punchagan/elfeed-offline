@@ -15,6 +15,11 @@ overview of how it works.
 
 - Clone the project
 
+- ~dune~ (unlike ~opam~) doesn't automatically manage external (system)
+  dependencies. You can run ~dune show depexts~ to see the external
+  dependencies, and install them using your system's package manager (like
+  ~apt~, ~homebew~, etc.)
+
 - Run ~dune build~. This will install all the dependencies including an OCaml
   compiler, and could take a while.
 
