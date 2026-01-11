@@ -17,7 +17,19 @@ module Config = struct
   let caches = [c_shell; c_content; c_tags]
 
   let shell =
-    ["/"; "/index.html"; "/manifest.webmanifest"; "/css/app.css"; "/js/app.js"]
+    [ "/"
+    ; "/index.html"
+    ; "/manifest.webmanifest"
+    ; "/css/app.css"
+    ; "/js/app.js"
+    ; (* Icons *)
+      "/icons/icon-192x192.png"
+    ; "/icons/icon-512x512.png"
+    ; "/icons/icon-maskable-192x192.png"
+    ; "/icons/icon-maskable-512x512.png"
+    ; (* Install screenshots *)
+      "/screenshots/mobile.png"
+    ; "/screenshots/desktop.png" ]
     |> List.map Jstr.v
 
   let default_query = "@30-days-ago +unread"
