@@ -18,3 +18,9 @@ for size in 192 512; do
     -alpha remove -alpha off \
     web/icons/icon-maskable-${size}x${size}.png
 done
+
+# Generate favicon.ico
+echo "Generating favicon.ico"
+magick web/icons/icon-192x192.png \
+  -resize 32x32 -resize 16x16 \
+  web/favicon.ico
