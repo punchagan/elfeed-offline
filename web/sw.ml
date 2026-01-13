@@ -289,12 +289,12 @@ end
 module Tags = struct
   let pending_request = Jstr.v "pending-updates" |> Fetch.Request.v
 
-  let mk_tags_request ~(web_id : string) ~(tags : string list)
+  let mk_tags_request ~(web_ids : string list) ~(tags : string list)
       ~(action : [`Add | `Remove]) =
     let action_key = match action with `Add -> "add" | `Remove -> "remove" in
     let body_json =
       Jv.obj
-        [| ("entries", Jv.of_jstr_list [Jstr.v web_id])
+        [| ("entries", Jv.of_jstr_list (List.map Jstr.v web_ids))
          ; (action_key, Jv.of_jstr_list (List.map Jstr.v tags)) |]
       |> Json.encode
     in
@@ -366,7 +366,7 @@ module Tags = struct
     ()
 
   let sync_update ({webid; tags; action} : Msg.tag_update) =
-    let request = mk_tags_request ~web_id:webid ~tags ~action in
+    let request = mk_tags_request ~web_ids:[webid] ~tags ~action in
     Fetch.request request
 
   (* NOTE: We replay the updates instead of combining add and remove requests
@@ -374,7 +374,7 @@ module Tags = struct
      the entry is deleted?) and the server then responds with a 404. Instead of
      complex logic to discover the failing webid, we choose to simply replay
      the changes here. *)
-  let sync_updates () =
+  let sync_updates_replay () =
     let open Fut.Result_syntax in
     let q = Queue.create () in
     let rec worker () =
@@ -431,11 +431,99 @@ module Tags = struct
     in
     ()
 
+  let sync_updates_merged () =
+    let open Fut.Result_syntax in
+    let* updates = get_updates () in
+    let add_map = Hashtbl.create 16 in
+    (* tag: [webids] *)
+    let remove_map = Hashtbl.create 16 in
+    (* tag: [webids] *)
+    List.iter
+      (fun (update : Msg.tag_update) ->
+        let target_map =
+          match update.action with `Add -> add_map | `Remove -> remove_map
+        in
+        List.iter
+          (fun tag ->
+            let webids =
+              match Hashtbl.find_opt target_map tag with
+              | Some ws ->
+                  ws
+              | None ->
+                  []
+            in
+            Hashtbl.replace target_map tag (update.webid :: webids) )
+          update.tags )
+      updates ;
+    let q = Queue.create () in
+    Hashtbl.iter
+      (fun tag webids ->
+        if List.length webids > 0 then Queue.push (`Add, tag, webids) q )
+      add_map ;
+    Hashtbl.iter
+      (fun tag webids ->
+        if List.length webids > 0 then Queue.push (`Remove, tag, webids) q )
+      remove_map ;
+    let rec worker () =
+      if Queue.is_empty q then (
+        notify_pending_updates () ;
+        set_updates [] |> ignore ;
+        Prefetch.prefetch_alternate_search_with_content
+          ~notify_last_update:false () ;
+        () )
+      else
+        let ((action, tag, webids) as update) = Queue.pop q in
+        let request = mk_tags_request ~web_ids:webids ~tags:[tag] ~action in
+        Fut.await (Fetch.request request) (function
+          | Error e ->
+              (* Server offline; Nothing to do *)
+              let msg =
+                Printf.sprintf
+                  "Tag update: failed due to network error for tag '%s'" tag
+              in
+              Console.log [Jv.of_string msg; e] ;
+              ()
+          | Ok r ->
+              let status = Fetch.Response.status r in
+              let _ =
+                let* updates = get_updates () in
+                let msg =
+                  if status = 200 then
+                    Printf.sprintf "Tag update: succeeded for tag %s" tag
+                  else if status = 404 then
+                    (* one of the webid not present on server *)
+                    Printf.sprintf
+                      "Tag update: a webid not found on server for tag %s; \
+                       trying replay"
+                      tag
+                  else
+                    Printf.sprintf
+                      "Tag update: failed for tag %s with status %d" tag status
+                in
+                Console.log [Jv.of_string msg] ;
+                match status with
+                | 200 ->
+                    (* Continue with next tag's updates *)
+                    Fut.ok (worker ())
+                | 404 ->
+                    (* FIXME: Make this more fine grained, instead of just
+                       replaying whatever was updated as pending before we
+                       started trying? *)
+                    (* Try the individual update replay approach  *)
+                    Fut.ok (sync_updates_replay ())
+                | _ ->
+                    (* Stop when other issues occur *)
+                    Fut.ok ()
+              in
+              () )
+    in
+    if not (Queue.is_empty q) then worker () |> Fut.ok else Fut.ok ()
+
   let persist_tag_updates_and_sync updates =
     Fut.await (set_updates updates) (function
       | Ok _ ->
           Console.log [Jv.of_string "Tag updates persisted for later sync."] ;
-          sync_updates () |> ignore
+          sync_updates_merged () |> ignore
       | Error e ->
           Console.log
             [Jv.of_string "Failed to persist tag updates for later sync."; e] )
@@ -501,7 +589,7 @@ let on_fetch e =
             Config.c_content
         in
         Fetch.Ev.respond_with e response ;
-        Tags.sync_updates ()
+        Tags.sync_updates_merged () |> ignore
     | _ ->
         Console.log [Jv.of_string "SW fetch"; Jv.of_jstr path] ;
         () ) ;
@@ -533,7 +621,7 @@ let on_message e =
     | Offline_tags_request ->
         Tags.notify_pending_updates ()
     | Synchronize_tags ->
-        Tags.sync_updates ()
+        Tags.sync_updates_merged () |> ignore
     | Search_update _
     | Prefetch_started _
     | Prefetch_done _
