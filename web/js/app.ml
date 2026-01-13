@@ -185,59 +185,59 @@ let search () =
 
 let on_message e =
   let data = e |> Ev.as_type |> Message.Ev.data in
-  try
-    match Msg.of_jv data with
-    | Prefetch_started {total} ->
-        set_status (Printf.sprintf "Starting… 0/%d" total)
-    | Prefetch_done {total} ->
-        set_status (Printf.sprintf "Saved %d items." total)
-    | Prefetch_progress {done_; total} ->
-        set_status (Printf.sprintf "Saving… %d/%d" done_ total)
-    | Prefetch_error {msg} ->
-        set_status (Printf.sprintf "Error: %s" msg)
-    | Search_update {delay} ->
-        if delay < 0.5 then
-          (* When the previous response was probably not "read" by the user,
+  match Msg.of_jv data with
+  | exception Msg.Parse_error _ ->
+      Console.log
+        [Jv.of_string "Failed to parse message received in app.ml"; data]
+  | Prefetch_started {total} ->
+      set_status (Printf.sprintf "Starting… 0/%d" total)
+  | Prefetch_done {total} ->
+      set_status (Printf.sprintf "Saved %d items." total)
+  | Prefetch_progress {done_; total} ->
+      set_status (Printf.sprintf "Saving… %d/%d" done_ total)
+  | Prefetch_error {msg} ->
+      set_status (Printf.sprintf "Error: %s" msg)
+  | Search_update {delay} ->
+      if delay < 0.5 then
+        (* When the previous response was probably not "read" by the user,
            automatically update the UI. *)
-          search ()
-        else
-          set_status
-            "UPDATED results available. Submit search to see updated results."
-    | Cache_cleared status ->
-        if status then set_status "Offline cache cleared."
-        else set_status "Failed to clear offline cache."
-    | Offline_tags updates ->
-        List.iter
-          (fun {Msg.webid; tags; action} ->
-            match action with
-            | `Add ->
-                State.add_tags webid tags
-            | `Remove ->
-                State.remove_tags webid tags )
-          updates ;
-        State.bump_update_entries ()
-    | Set_last_update {timestamp} -> (
-        Heartbeat.set_last_update timestamp ;
-        match Ptime.of_float_s timestamp with
-        | Some pt ->
-            let fmt = Ptime.to_rfc3339 pt in
-            let msg =
-              Printf.sprintf "Prefetched content from Elfeed last update at %s"
-                fmt
-            in
-            set_status msg
-        | None ->
-            () )
-    | Prefetch_request _
-    | Delete_cache
-    | Tag_update _
-    | Offline_tags_request
-    | Synchronize_tags ->
-        Console.warn
-          [Jv.of_string "Received unexpected message from SW in app.ml"; data] ;
-        ()
-  with Msg.Parse_error _ ->
-    Console.log [Jv.of_string "Failed to parse message received in app.ml"; data]
+        search ()
+      else
+        set_status
+          "UPDATED results available. Submit search to see updated results."
+  | Cache_cleared status ->
+      if status then set_status "Offline cache cleared."
+      else set_status "Failed to clear offline cache."
+  | Offline_tags updates ->
+      List.iter
+        (fun {Msg.webid; tags; action} ->
+          match action with
+          | `Add ->
+              State.add_tags webid tags
+          | `Remove ->
+              State.remove_tags webid tags )
+        updates ;
+      State.bump_update_entries ()
+  | Set_last_update {timestamp} -> (
+      Heartbeat.set_last_update timestamp ;
+      match Ptime.of_float_s timestamp with
+      | Some pt ->
+          let fmt = Ptime.to_rfc3339 pt in
+          let msg =
+            Printf.sprintf "Prefetched content from Elfeed last update at %s"
+              fmt
+          in
+          set_status msg
+      | None ->
+          () )
+  | Prefetch_request _
+  | Delete_cache
+  | Tag_update _
+  | Offline_tags_request
+  | Synchronize_tags ->
+      Console.warn
+        [Jv.of_string "Received unexpected message from SW in app.ml"; data] ;
+      ()
 
 let mark_all_as_read _ =
   List.iter
