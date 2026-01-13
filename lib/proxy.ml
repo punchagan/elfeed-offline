@@ -57,6 +57,10 @@ let forward ~upstream ~method' (req : Dream.request) =
       >>= fun s ->
       let headers = Http.Response.headers resp |> Cohttp.Header.to_list in
       let status = Cohttp.Response.status resp |> Cohttp.Code.code_of_status in
+      (* Connection: keep-alive is not a valid HTTP/2 header *)
+      let headers =
+        List.filter (fun (k, _) -> not (String.equal k "Connection")) headers
+      in
       let html = if is_content_uri client_uri then wrapped_html s else s in
       if status >= 400 && is_content_uri client_uri then
         let error_html =
