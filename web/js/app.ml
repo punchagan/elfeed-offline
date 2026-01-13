@@ -217,7 +217,9 @@ let on_message e =
           | `Remove ->
               State.remove_tags webid tags )
         updates ;
-      State.bump_update_entries ()
+      State.bump_update_entries () ;
+      let n = List.length updates in
+      set_status (Printf.sprintf "%d updates pending until online." n)
   | Set_last_update {timestamp} -> (
       Heartbeat.set_last_update timestamp ;
       match Ptime.of_float_s timestamp with
