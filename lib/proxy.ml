@@ -29,6 +29,26 @@ let wrapped_html html =
 |}
     html
 
+(** [sanitize_headers] strips out HTTP/1 headers before returning the response.
+    Some clients for example Safari and even newer versions of curl are pretty
+    strict about this and fail if there are HTTP/1 headers which are invalid in
+    HTTP/2 in the response. *)
+let sanitize_headers headers =
+  let invalid_h2_headers =
+    [ "connection"
+    ; "keep-alive"
+    ; "transfer-encoding"
+    ; "upgrade"
+    ; "proxy-connection" ]
+  in
+  let additional_headers =
+    ["content-length" (* Wrapped HTML etc would change the content length *)]
+  in
+  let to_filter = invalid_h2_headers @ additional_headers in
+  List.filter
+    (fun (k, _) -> not (List.mem (String.lowercase_ascii k) to_filter))
+    headers
+
 let forward ~upstream ~method' (req : Dream.request) =
   let client_uri = Uri.of_string (Dream.target req) in
   let target = Uri.with_path upstream (Uri.path client_uri) in
@@ -57,10 +77,7 @@ let forward ~upstream ~method' (req : Dream.request) =
       >>= fun s ->
       let headers = Http.Response.headers resp |> Cohttp.Header.to_list in
       let status = Cohttp.Response.status resp |> Cohttp.Code.code_of_status in
-      (* Connection: keep-alive is not a valid HTTP/2 header *)
-      let headers =
-        List.filter (fun (k, _) -> not (String.equal k "Connection")) headers
-      in
+      let headers = sanitize_headers headers in
       let html = if is_content_uri client_uri then wrapped_html s else s in
       if status >= 400 && is_content_uri client_uri then
         let error_html =
