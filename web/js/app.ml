@@ -123,7 +123,7 @@ let display_results response =
      now. This means any discrepancies between the two searches are more likely
      to be user visible than before. *)
   update_app_state data ;
-  ( match State.state.selected with
+  ( match State.state.opened with
   | Some webid ->
       if not (List.mem webid State.state.results) then close_entry ()
   | None ->

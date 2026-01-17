@@ -18,7 +18,7 @@ type tag_map = (string, string list) Hashtbl.t
 type model =
   { mutable entries: entry_map
   ; mutable results: string list
-  ; mutable selected: string option
+  ; mutable opened: string option
   ; mutable search_query: string
   ; mutable tags_added: tag_map
   ; mutable tags_removed: tag_map
@@ -27,7 +27,7 @@ type model =
 let state =
   { entries= Hashtbl.create 30
   ; results= []
-  ; selected= None
+  ; opened= None
   ; search_query= "@30-days-ago +unread"
   ; tags_added= Hashtbl.create 10
   ; tags_removed= Hashtbl.create 10

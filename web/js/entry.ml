@@ -157,7 +157,7 @@ let make_entry (data : State.entry) =
         (* Set reading mode *)
         Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
         Console.log [Jv.of_string "Selected entry"; Jv.of_string data.webid] ;
-        State.state.selected <- Some data.webid ;
+        State.state.opened <- Some data.webid ;
         State.bump_epoch () )
       (El.as_target entry)
   in

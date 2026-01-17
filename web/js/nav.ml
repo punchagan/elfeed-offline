@@ -14,7 +14,7 @@ let status_msg = ref ""
 let saved_index = ref None
 
 let goto_prev_entry () =
-  match state.selected with
+  match state.opened with
   | None ->
       ()
   | Some webid -> (
@@ -26,14 +26,14 @@ let goto_prev_entry () =
       | Some index, _ | _, Some index ->
           if index > 0 then (
             let prev_webid = List.nth results (index - 1) in
-            state.selected <- Some prev_webid ;
+            state.opened <- Some prev_webid ;
             saved_index := Some (index - 1) ;
             State.bump_epoch () )
       | _ ->
           () )
 
 let goto_next_entry () =
-  match state.selected with
+  match state.opened with
   | None ->
       ()
   | Some webid -> (
@@ -49,7 +49,7 @@ let goto_next_entry () =
             in
             let next_webid = List.nth results next_index in
             saved_index := Some next_index ;
-            state.selected <- Some next_webid ;
+            state.opened <- Some next_webid ;
             State.bump_epoch () )
       | _ ->
           () )
@@ -101,7 +101,7 @@ let render_nav () =
   let title_el = get_element_by_id_exn "nav-title" in
   let feed_el = get_element_by_id_exn "nav-feed" in
   let entry_nav_el = get_element_by_id_exn "entry-nav" in
-  match state.selected with
+  match state.opened with
   | None ->
       (* Hide the entry-nav section *)
       set_button_visible entry_nav_el false ;
@@ -238,7 +238,7 @@ let close_entry _ =
   Document.body G.document |> El.set_class (Jstr.of_string "reading") false ;
   let content_el = get_element_by_id_exn "content" in
   El.set_at At.Name.src (Some (Jstr.v "about:blank")) content_el ;
-  state.selected <- None ;
+  state.opened <- None ;
   saved_index := None ;
   status_msg := "" ;
   State.bump_epoch ()
@@ -261,7 +261,7 @@ let setup_nav_handlers () =
   let mark_read_btn_el = get_element_by_id_exn "mark-read" in
   Ev.listen Ev.click
     (fun _ ->
-      match state.selected with
+      match state.opened with
       | None ->
           ()
       | Some webid ->
@@ -272,7 +272,7 @@ let setup_nav_handlers () =
   let mark_unread_btn_el = get_element_by_id_exn "mark-unread" in
   Ev.listen Ev.click
     (fun _ ->
-      match state.selected with
+      match state.opened with
       | None ->
           ()
       | Some webid ->
@@ -283,21 +283,21 @@ let setup_nav_handlers () =
   let star_btn_el = get_element_by_id_exn "star-entry" in
   Ev.listen Ev.click
     (fun _ ->
-      match state.selected with None -> () | Some webid -> star_entry webid )
+      match state.opened with None -> () | Some webid -> star_entry webid )
     (El.as_target star_btn_el)
   |> ignore ;
   (* Hook up unstar-entry handler *)
   let unstar_btn_el = get_element_by_id_exn "unstar-entry" in
   Ev.listen Ev.click
     (fun _ ->
-      match state.selected with None -> () | Some webid -> unstar_entry webid )
+      match state.opened with None -> () | Some webid -> unstar_entry webid )
     (El.as_target unstar_btn_el)
   |> ignore ;
   (* Hook up copy-url handler *)
   let copy_url_btn_el = get_element_by_id_exn "copy-url" in
   Ev.listen Ev.click
     (fun _ ->
-      match state.selected with
+      match state.opened with
       | None ->
           ()
       | Some webid ->

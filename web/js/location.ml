@@ -16,7 +16,7 @@ let set_state_from_location_hash () =
   | None ->
       ()
   | Some v ->
-      State.state.selected <- Some (Jstr.to_string v)
+      State.state.opened <- Some (Jstr.to_string v)
 
 let set_location_hash () =
   let location = G.window |> Window.location in
@@ -26,7 +26,7 @@ let set_location_hash () =
     else []
   in
   let fragments =
-    ( match State.state.selected with
+    ( match State.state.opened with
       | Some webid ->
           (Jstr.v "webid", Jstr.v webid) :: fragments_assoc
       | None ->
