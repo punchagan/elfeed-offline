@@ -1,0 +1,25 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  job:
+    container: alpine:latest
+    env:
+      HOME: /root
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Alpine
+        run: apk add --no-cache git bash curl
+      - name: Configure git safedir properly
+        run: git config --global --add safe.directory $(pwd)
+      - uses: actions/checkout@v6
+      - name: Use dune
+        uses: ocaml-dune/setup-dune@v1
+        with:
+          steps: "install-dune install-depexts build runtest"
+      - name: Make artifact
+        run: bash scripts/make-artifact.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: elfeed-offline-x86-artifact
+          path: elfeed-offline.tar.gz
