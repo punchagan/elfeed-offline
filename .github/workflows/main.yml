@@ -39,7 +39,7 @@ jobs:
           echo "elfeed-offline.muse-amuse.in" > web/CNAME
       - name: Upload web/ to GitHub Pages
         if: ${{ matrix.runs-on == 'ubuntu-latest' }}
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: web
       - name: Deploy
