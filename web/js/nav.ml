@@ -13,6 +13,47 @@ let status_msg = ref ""
     marked as read. *)
 let saved_index = ref None
 
+let goto_prev_entry () =
+  match state.selected with
+  | None ->
+      ()
+  | Some webid -> (
+      let results = state.results in
+      let current_index =
+        List.find_index (fun id -> id = webid) state.results
+      in
+      match (current_index, !saved_index) with
+      | Some index, _ | _, Some index ->
+          if index > 0 then (
+            let prev_webid = List.nth results (index - 1) in
+            state.selected <- Some prev_webid ;
+            saved_index := Some (index - 1) ;
+            State.bump_epoch () )
+      | _ ->
+          () )
+
+let goto_next_entry () =
+  match state.selected with
+  | None ->
+      ()
+  | Some webid -> (
+      let results = state.results in
+      let current_index =
+        List.find_index (fun id -> id = webid) state.results
+      in
+      match (current_index, !saved_index) with
+      | Some index, _ | _, Some index ->
+          if index < List.length results - 1 then (
+            let next_index =
+              if Option.is_some current_index then index + 1 else index
+            in
+            let next_webid = List.nth results next_index in
+            saved_index := Some next_index ;
+            state.selected <- Some next_webid ;
+            State.bump_epoch () )
+      | _ ->
+          () )
+
 let set_button_enabled el enabled =
   let enabled_attr = if enabled then None else Some (Jstr.v "true") in
   El.set_at At.Name.disabled enabled_attr el ;
@@ -210,52 +251,11 @@ let setup_nav_handlers () =
   Ev.listen Ev.click close_entry (El.as_target close_btn_el) |> ignore ;
   (* Hook up prev-btn click handler *)
   let prev_btn_el = get_element_by_id_exn "prev-entry" in
-  Ev.listen Ev.click
-    (fun _ ->
-      match state.selected with
-      | None ->
-          ()
-      | Some webid -> (
-          let results = state.results in
-          let current_index =
-            List.find_index (fun id -> id = webid) state.results
-          in
-          match (current_index, !saved_index) with
-          | Some index, _ | _, Some index ->
-              if index > 0 then (
-                let prev_webid = List.nth results (index - 1) in
-                state.selected <- Some prev_webid ;
-                saved_index := Some (index - 1) ;
-                State.bump_epoch () )
-          | _ ->
-              () ) )
-    (El.as_target prev_btn_el)
+  Ev.listen Ev.click (fun _ -> goto_prev_entry ()) (El.as_target prev_btn_el)
   |> ignore ;
   (* Hook up next-btn click handler *)
   let next_btn_el = get_element_by_id_exn "next-entry" in
-  Ev.listen Ev.click
-    (fun _ ->
-      match state.selected with
-      | None ->
-          ()
-      | Some webid -> (
-          let results = state.results in
-          let current_index =
-            List.find_index (fun id -> id = webid) state.results
-          in
-          match (current_index, !saved_index) with
-          | Some index, _ | _, Some index ->
-              if index < List.length results - 1 then (
-                let next_index =
-                  if Option.is_some current_index then index + 1 else index
-                in
-                let next_webid = List.nth results next_index in
-                saved_index := Some next_index ;
-                state.selected <- Some next_webid ;
-                State.bump_epoch () )
-          | _ ->
-              () ) )
-    (El.as_target next_btn_el)
+  Ev.listen Ev.click (fun _ -> goto_next_entry ()) (El.as_target next_btn_el)
   |> ignore ;
   (* Hook up mark-as-read handler *)
   let mark_read_btn_el = get_element_by_id_exn "mark-read" in
