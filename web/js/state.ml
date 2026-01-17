@@ -19,6 +19,12 @@ type model =
   { mutable entries: entry_map
   ; mutable results: string list
   ; mutable opened: string option
+  ; mutable selected_index: int option
+        (** This is used to keep track of the index of the currently selected entry to
+      be able to navigate to prev/next entries when the results list changes to
+      exclude the currently selected entry, for instance, the current search
+      results only contain unread items, and the currently selected entry is
+      marked as read. *)
   ; mutable search_query: string
   ; mutable tags_added: tag_map
   ; mutable tags_removed: tag_map
@@ -28,6 +34,7 @@ let state =
   { entries= Hashtbl.create 30
   ; results= []
   ; opened= None
+  ; selected_index= None
   ; search_query= "@30-days-ago +unread"
   ; tags_added= Hashtbl.create 10
   ; tags_removed= Hashtbl.create 10

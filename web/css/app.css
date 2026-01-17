@@ -125,6 +125,11 @@ main {
 .entry.unread {
     border-left: 4px solid rgb(229, 109, 37, 0.75);
 }
+.entry.selected {
+    border-top: 4px solid rgb(37, 109, 229, 0.75);
+    border-bottom: 4px solid rgb(37, 109, 229, 0.75);
+    border-right: 4px solid rgb(37, 109, 229, 0.75);
+}
 .title {
     display: block;
     font-weight: 600;

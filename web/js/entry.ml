@@ -143,24 +143,33 @@ let make_entry (data : State.entry) =
       ~at:[At.v At.Name.class' (Jstr.of_string "entry-controls")]
       (Jstr.of_string "div") [date_el; icon_span]
   in
+  let is_selected =
+    match State.state.selected_index with
+    | Some idx when List.nth_opt State.state.results idx = Some data.webid ->
+        true
+    | _ ->
+        false
+  in
+  let selected_class =
+    if is_selected then Jstr.of_string "selected" else Jstr.empty
+  in
   let entry =
     El.v
       ~at:
         [ "entry" |> Jstr.v |> At.class'
-        ; (if data.is_unread then "unread" else "") |> Jstr.v |> At.class' ]
+        ; (if data.is_unread then "unread" else "") |> Jstr.v |> At.class'
+        ; selected_class |> At.class' ]
       (Jstr.of_string "div")
       [controls_el; title_el; feed_el; tags_el]
   in
-  let _ =
-    Ev.listen Ev.click
-      (fun _ ->
-        (* Set reading mode *)
-        Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
-        Console.log [Jv.of_string "Selected entry"; Jv.of_string data.webid] ;
-        State.state.opened <- Some data.webid ;
-        State.bump_epoch () )
-      (El.as_target entry)
-  in
+  Ev.listen Ev.click
+    (fun _ ->
+      (* Set reading mode *)
+      Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
+      State.state.opened <- Some data.webid ;
+      State.bump_epoch () )
+    (El.as_target entry)
+  |> ignore ;
   entry
 
 let update_entry_tags ~(state : State.model) (entry : State.entry) =

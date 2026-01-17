@@ -34,6 +34,12 @@ let update_entries () =
       |> List.map (fun (e : State.entry) -> e.webid)
     in
     State.state.results <- updated_entries ;
+    ( match State.state.opened with
+    | Some webid ->
+        State.state.selected_index <-
+          State.state.results |> List.find_index (fun w -> String.equal w webid)
+    | None ->
+        () ) ;
     let n = List.length State.state.results in
     let status = "found " ^ string_of_int n ^ " items" in
     set_status status ;
@@ -59,7 +65,15 @@ let mount_into (host : El.t) (doc : Elwd.t Lwd.t) =
   let root = Lwd.observe doc in
   let render () = El.set_children host [Lwd.quick_sample root] in
   Lwd.set_on_invalidate root (fun _ ->
-      G.request_animation_frame (fun _ -> render ()) |> ignore ) ;
+      G.request_animation_frame (fun _ ->
+          render () ;
+          El.find_first_by_selector (Jstr.v ".entry.selected")
+          |> function
+          | Some el ->
+              El.scroll_into_view ~align_v:`Center ~behavior:`Smooth el
+          | None ->
+              () )
+      |> ignore ) ;
   render ()
 
 let prefetch_top_n ?(n = 30) _click_evt =

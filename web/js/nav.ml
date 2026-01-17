@@ -6,13 +6,6 @@ open Brr_lwd
 
 let status_msg = ref ""
 
-(** This is used to keep track of the index of the currently selected entry to
-    be able to navigate to prev/next entries when the results list changes to
-    exclude the currently selected entry, for instance, the current search
-    results only contain unread items, and the currently selected entry is
-    marked as read. *)
-let saved_index = ref None
-
 let goto_prev_entry () =
   match state.opened with
   | None ->
@@ -22,12 +15,12 @@ let goto_prev_entry () =
       let current_index =
         List.find_index (fun id -> id = webid) state.results
       in
-      match (current_index, !saved_index) with
+      match (current_index, state.selected_index) with
       | Some index, _ | _, Some index ->
           if index > 0 then (
             let prev_webid = List.nth results (index - 1) in
             state.opened <- Some prev_webid ;
-            saved_index := Some (index - 1) ;
+            state.selected_index <- Some (index - 1) ;
             State.bump_epoch () )
       | _ ->
           () )
@@ -41,14 +34,14 @@ let goto_next_entry () =
       let current_index =
         List.find_index (fun id -> id = webid) state.results
       in
-      match (current_index, !saved_index) with
+      match (current_index, state.selected_index) with
       | Some index, _ | _, Some index ->
           if index < List.length results - 1 then (
             let next_index =
               if Option.is_some current_index then index + 1 else index
             in
             let next_webid = List.nth results next_index in
-            saved_index := Some next_index ;
+            state.selected_index <- Some next_index ;
             state.opened <- Some next_webid ;
             State.bump_epoch () )
       | _ ->
@@ -137,14 +130,14 @@ let render_nav () =
             List.find_index (fun id -> id = s) state.results
           in
           let index_ =
-            if Option.is_some current_index then current_index else !saved_index
+            if Option.is_some current_index then current_index
+            else state.selected_index
           in
           ( match index_ with
           | None ->
               set_button_enabled next_btn_el false ;
               set_button_enabled prev_btn_el false
           | Some index ->
-              if Option.is_some current_index then saved_index := current_index ;
               if index < List.length results - 1 then
                 set_button_enabled next_btn_el true
               else set_button_enabled next_btn_el false ;
@@ -239,7 +232,7 @@ let close_entry _ =
   let content_el = get_element_by_id_exn "content" in
   El.set_at At.Name.src (Some (Jstr.v "about:blank")) content_el ;
   state.opened <- None ;
-  saved_index := None ;
+  state.selected_index <- None ;
   status_msg := "" ;
   State.bump_epoch ()
 
