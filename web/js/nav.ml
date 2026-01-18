@@ -172,20 +172,6 @@ let hook_render_nav doc =
       G.request_animation_frame (fun _ -> render ()) |> ignore ) ;
   render ()
 
-let tag_update_success status =
-  let msg =
-    (* Request has been cached by service worker *)
-    if status = 202 then "Tags will be updated when online"
-    else "Tag data updated successfully"
-  in
-  status_msg := msg ;
-  render_nav_status () ;
-  submit_search_form ()
-
-let tag_update_failure () =
-  status_msg := "Failed to update tag data!" ;
-  render_nav_status ()
-
 let post_tags_update () =
   let module Msg = Elfeed_shared.Elfeed_message in
   let tags_added =
