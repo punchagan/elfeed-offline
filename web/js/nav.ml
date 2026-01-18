@@ -4,7 +4,24 @@ module Clipboard = Brr_io.Clipboard
 open State
 open Brr_lwd
 
-let status_msg = ref ""
+let status_msg = Lwd.var ""
+
+let set_status_msg msg = Lwd.update (fun _ -> msg) status_msg
+
+let hook_nav_status () =
+  let root = Lwd.observe (Lwd.get status_msg) in
+  let render () =
+    let msg = Lwd.quick_sample root in
+    let status_el = get_element_by_id_exn "nav-status" in
+    El.set_at At.Name.class' (Some (Jstr.v "empty")) status_el ;
+    set_text status_el msg ;
+    G.request_animation_frame (fun _ ->
+        El.set_at At.Name.class' (Some (Jstr.v "set")) status_el )
+    |> ignore
+  in
+  Lwd.set_on_invalidate root (fun _ ->
+      G.request_animation_frame (fun _ -> render ()) |> ignore ) ;
+  render ()
 
 let goto_prev_entry () =
   match state.opened with
@@ -152,22 +169,12 @@ let render_nav () =
           set_text feed_el feed ;
           set_open_original (Some (Jstr.v entry.link)) )
 
-let render_nav_status () =
-  let status_el = get_element_by_id_exn "nav-status" in
-  El.set_at At.Name.class' (Some (Jstr.v "empty")) status_el ;
-  set_text status_el !status_msg ;
-  G.request_animation_frame (fun _ ->
-      El.set_at At.Name.class' (Some (Jstr.v "set")) status_el )
-  |> ignore
-
 (* HACK: To reuse the existing navbar in the HTML *)
 let navbar_doc = Lwd.get State.epoch_v |> Lwd.map ~f:(fun _ -> ())
 
 let hook_render_nav doc =
   let root = Lwd.observe doc in
-  let render () =
-    Lwd.quick_sample root ; render_nav () ; render_nav_status ()
-  in
+  let render () = Lwd.quick_sample root ; render_nav () in
   Lwd.set_on_invalidate root (fun _ ->
       G.request_animation_frame (fun _ -> render ()) |> ignore ) ;
   render ()
@@ -219,12 +226,13 @@ let close_entry _ =
   El.set_at At.Name.src (Some (Jstr.v "about:blank")) content_el ;
   state.opened <- None ;
   state.selected_index <- None ;
-  status_msg := "" ;
+  set_status_msg "" ;
   State.bump_epoch ()
 
 let setup_nav_handlers () =
   (* Hook up render to navbar_doc *)
   hook_render_nav navbar_doc ;
+  hook_nav_status () ;
   (* Hook up close-btn click handler *)
   let close_btn_el = get_element_by_id_exn "close-entry" in
   Ev.listen Ev.click close_entry (El.as_target close_btn_el) |> ignore ;
@@ -287,10 +295,8 @@ let setup_nav_handlers () =
           Fut.await (Clipboard.write_text clipboard link) (fun result ->
               match result with
               | Ok () ->
-                  status_msg := "URL copied to clipboard" ;
-                  render_nav_status ()
+                  set_status_msg "URL copied to clipboard"
               | Error _ ->
-                  status_msg := "Failed to copy URL to clipboard" ;
-                  render_nav_status () ) )
+                  set_status_msg "Failed to copy URL to clipboard" ) )
     (El.as_target copy_url_btn_el)
   |> ignore
