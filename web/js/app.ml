@@ -142,7 +142,7 @@ let display_results response =
   update_app_state data ;
   ( match State.state.opened with
   | Some webid ->
-      if not (List.mem webid State.state.results) then close_entry ()
+      if not (List.mem webid State.state.results) then Actions.close_entry ()
   | None ->
       () ) ;
   Fut.ok ()
@@ -262,7 +262,7 @@ let mark_all_as_read _ =
   List.iter
     (fun webid -> State.remove_tags webid ["unread"])
     State.state.results ;
-  post_tags_update () ;
+  Actions.Tags.post_tags_update () ;
   State.bump_update_entries ()
 
 let confirm_mark_all_as_read evt =
