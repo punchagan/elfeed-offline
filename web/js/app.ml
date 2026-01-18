@@ -36,8 +36,11 @@ let update_entries () =
     State.state.results <- updated_entries ;
     ( match State.state.opened with
     | Some webid ->
-        State.state.selected_index <-
+        let current_index =
           State.state.results |> List.find_index (fun w -> String.equal w webid)
+        in
+        if Option.is_some current_index then
+          State.state.selected_index <- current_index
     | None ->
         () ) ;
     let n = List.length State.state.results in
