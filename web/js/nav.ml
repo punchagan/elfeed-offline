@@ -127,11 +127,11 @@ let setup_nav_handlers () =
   Ev.listen Ev.click Actions.close_entry (El.as_target close_btn_el) |> ignore ;
   (* Hook up prev-btn click handler *)
   let prev_btn_el = get_element_by_id_exn "prev-entry" in
-  Ev.listen Ev.click Actions.goto_prev_entry (El.as_target prev_btn_el)
+  Ev.listen Ev.click Actions.open_prev_entry (El.as_target prev_btn_el)
   |> ignore ;
   (* Hook up next-btn click handler *)
   let next_btn_el = get_element_by_id_exn "next-entry" in
-  Ev.listen Ev.click Actions.goto_next_entry (El.as_target next_btn_el)
+  Ev.listen Ev.click Actions.open_next_entry (El.as_target next_btn_el)
   |> ignore ;
   (* Hook up mark-as-read handler *)
   let mark_read_btn_el = get_element_by_id_exn "mark-read" in

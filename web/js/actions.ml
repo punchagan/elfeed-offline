@@ -73,7 +73,7 @@ let close_entry _ =
   set_status_msg "" ;
   State.bump_epoch ()
 
-let goto_prev_entry _ =
+let open_prev_entry _ =
   match state.opened with
   | None ->
       ()
@@ -92,7 +92,7 @@ let goto_prev_entry _ =
       | _ ->
           () )
 
-let goto_next_entry _ =
+let open_next_entry _ =
   match state.opened with
   | None ->
       ()
