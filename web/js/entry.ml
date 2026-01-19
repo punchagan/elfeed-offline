@@ -164,10 +164,12 @@ let make_entry (data : State.entry) =
   in
   Ev.listen Ev.click
     (fun _ ->
-      (* Set reading mode *)
-      Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
-      State.state.opened <- Some data.webid ;
-      State.bump_epoch () )
+      match List.find_index (fun id -> id = data.webid) State.state.results with
+      | None ->
+          ()
+      | Some idx ->
+          State.state.selected_index <- Some idx ;
+          Actions.open_selected_entry () )
     (El.as_target entry)
   |> ignore ;
   entry

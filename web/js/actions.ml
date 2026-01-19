@@ -149,3 +149,19 @@ let star_entry _ =
 
 let unstar_entry _ =
   match state.opened with None -> () | Some webid -> Tags.unstar_entry webid
+
+let open_selected_entry _ =
+  match state.selected_index with
+  | None ->
+      ()
+  | Some idx -> (
+      let opened = List.nth_opt state.results idx in
+      match opened with
+      | None ->
+          ()
+      | Some webid ->
+          (* Set reading mode *)
+          Document.body G.document
+          |> El.set_class (Jstr.of_string "reading") true ;
+          State.state.opened <- Some webid ;
+          State.bump_epoch () )
