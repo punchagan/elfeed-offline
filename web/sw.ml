@@ -19,6 +19,7 @@ module Config = struct
   let shell =
     [ "/"
     ; "/index.html"
+    ; "/start.html"
     ; "/manifest.webmanifest"
     ; "/css/app.css"
     ; "/js/app.js"
