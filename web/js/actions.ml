@@ -78,6 +78,9 @@ let open_selected_entry _ =
           (* Set reading mode *)
           Document.body G.document
           |> El.set_class (Jstr.of_string "reading") true ;
+          (* Set focus to iframe for arrow keys, etc to work for navigation *)
+          let content_el = get_element_by_id_exn "content" in
+          El.set_has_focus true content_el ;
           State.state.opened <- Some webid ;
           State.bump_epoch () )
 
