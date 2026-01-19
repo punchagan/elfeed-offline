@@ -66,6 +66,9 @@ let start_page _ =
   <p class="secondary">
     Articles are loaded here and can be read offline once cached.
   </p>
+  <p id="shortcuts-hint" class="hint">
+    Tip: Press <kbd>?</kbd> to see keyboard shortcuts.
+  </p>
 </div>
 |}
   in

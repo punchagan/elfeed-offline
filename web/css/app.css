@@ -216,6 +216,139 @@ button,
     margin-left: 8px;
 }
 
+/* Shortcut help dialog related CSS */
+.shortcut-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(6px);
+}
+
+/* The dialog box */
+.shortcut-dialog {
+    width: min(520px, calc(100vw - 2rem));
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 14px;
+    padding: 0;
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.25),
+        0 2px 10px rgba(0, 0, 0, 0.12);
+}
+
+/* If you want it to match dark mode better */
+@media (prefers-color-scheme: dark) {
+    .shortcut-dialog {
+        background: #0f172a; /* matches your icon theme */
+        color: rgba(255, 255, 255, 0.92);
+        border-color: rgba(255, 255, 255, 0.12);
+    }
+}
+
+.shortcut-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+    .shortcut-header {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+}
+
+.shortcut-header h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: 0.2px;
+}
+.shortcut-category {
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    padding: 0 16px;
+    color: rgba(0, 0, 0, 0.6);
+}
+@media (prefers-color-scheme: dark) {
+    .shortcut-category {
+        color: rgba(255, 255, 255, 0.8);
+    }
+}
+
+.shortcut-close {
+    border: none;
+    background: transparent;
+    font-size: 18px;
+    line-height: 1;
+    padding: 6px 10px;
+    border-radius: 8px;
+    opacity: 0.75;
+}
+
+.shortcut-close:hover {
+    background: rgba(0, 0, 0, 0.06);
+    opacity: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+    .shortcut-close:hover {
+        background: rgba(255, 255, 255, 0.08);
+    }
+}
+
+.shortcut-content {
+    padding: 12px 16px 14px;
+    display: grid;
+    gap: 10px;
+}
+
+/* each row: key left, desc right */
+.shortcut-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+}
+
+.shortcut-row + .shortcut-row {
+    border-top: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+    .shortcut-row + .shortcut-row {
+        border-top-color: rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* Make keys look like keys */
+.shortcut-row kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    min-width: 44px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0.3px;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+    .shortcut-row kbd {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.12);
+        box-shadow: none;
+    }
+}
+
 /* Full-screen reader when body.reading is set */
 @media (max-width: 800px) {
     main {

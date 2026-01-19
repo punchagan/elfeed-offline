@@ -306,6 +306,8 @@ let search_add_remove_unread evt =
   set_query new_q ; search ()
 
 let setup_handlers () =
+  (* Hook up keyboard nav handler *)
+  Keyboard_nav.setup_keyboard_handlers () ;
   (* Hook up changes to q input *)
   let q_el = get_element_by_id_exn "q" in
   Ev.listen Ev.change

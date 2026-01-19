@@ -32,5 +32,6 @@
   util
   location
   heartbeat
-  actions)
+  actions
+  keyboard_nav)
  (libraries brr astring str ptime ptime.clock uri elfeed_shared lwd brr-lwd))

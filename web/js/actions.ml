@@ -133,6 +133,24 @@ let open_next_entry _ =
       | _ ->
           () )
 
+let select_next_entry _ =
+  ( match state.selected_index with
+  | None ->
+      state.selected_index <- Some 0
+  | Some idx ->
+      let new' = min (List.length state.results - 1) (idx + 1) in
+      state.selected_index <- Some new' ) ;
+  State.bump_epoch ()
+
+let select_prev_entry _ =
+  ( match state.selected_index with
+  | None ->
+      state.selected_index <- Some (List.length state.results - 1)
+  | Some idx ->
+      let new' = max 0 (idx - 1) in
+      state.selected_index <- Some new' ) ;
+  State.bump_epoch ()
+
 let copy_entry_url _ =
   match state.opened with
   | None ->
@@ -148,6 +166,16 @@ let copy_entry_url _ =
               set_status_msg "URL copied to clipboard"
           | Error _ ->
               set_status_msg "Failed to copy URL to clipboard" )
+
+let browse_entry _ =
+  match state.opened with
+  | None ->
+      ()
+  | Some webid ->
+      let link =
+        Hashtbl.find state.entries webid |> (fun x -> x.link) |> Jstr.v
+      in
+      Window.open' G.window link |> ignore
 
 let mark_as_read _ =
   match state.opened with
