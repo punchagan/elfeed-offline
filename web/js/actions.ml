@@ -196,3 +196,7 @@ let star_entry _ =
 
 let unstar_entry _ =
   match state.opened with None -> () | Some webid -> Tags.unstar_entry webid
+
+let focus_search_input _ =
+  let search_input_el = get_element_by_id_exn "q" in
+  El.set_has_focus true search_input_el

@@ -11,7 +11,15 @@ let shortcuts =
     ; shortcuts=
         [ { key= "?"
           ; description= "Toggle this help"
-          ; action= (fun () -> Lwd.update not show_help) } ] }
+          ; action= (fun () -> Lwd.update not show_help) }
+        ; { key= "/"
+          ; description= "Focus search input"
+          ; action= Actions.focus_search_input } ] }
+  ; { name= "Search Input Actions"
+    ; shortcuts=
+        [ { key= "Esc" (* HACK: to get search across shortcuts by key to work *)
+          ; description= "Remove focus from search input"
+          ; action= (fun () -> ()) } ] }
   ; { name= "Selected Entry Actions"
     ; shortcuts=
         [ { key= "Enter"
@@ -131,18 +139,27 @@ let hook_render_help_dialog () =
 (** Handler to trigger keyboard shortcuts*)
 let handler evt =
   let el = evt |> Ev.target |> Ev.target_to_jv |> El.of_jv in
-  if El.has_tag_name (Jstr.v "input") el then ()
+  let k = Ev.as_type evt in
+  let key = k |> Ev.Keyboard.key |> Jstr.to_string in
+  if Ev.Keyboard.alt_key k || Ev.Keyboard.meta_key k || Ev.Keyboard.ctrl_key k
+  then ()
+  else if
+    El.has_tag_name (Jstr.v "input") el
+    || El.has_tag_name (Jstr.v "textarea") el
+  then
+    match key with
+    | "Escape" ->
+        Ev.prevent_default evt ;
+        Ev.stop_propagation evt ;
+        El.set_has_focus false el
+    | _ ->
+        ()
   else
-    let k = Ev.as_type evt in
-    if Ev.Keyboard.alt_key k || Ev.Keyboard.meta_key k || Ev.Keyboard.ctrl_key k
-    then ()
-    else
-      let key = k |> Ev.Keyboard.key |> Jstr.to_string in
-      match List.find_opt (fun sc -> sc.key = key) shortcuts' with
-      | Some sc ->
-          Ev.prevent_default evt ; Ev.stop_propagation evt ; sc.action ()
-      | None ->
-          ()
+    match List.find_opt (fun sc -> sc.key = key) shortcuts' with
+    | Some sc ->
+        Ev.prevent_default evt ; Ev.stop_propagation evt ; sc.action ()
+    | None ->
+        ()
 
 let setup_keyboard_handlers () =
   add_help_dialog () ;
