@@ -30,7 +30,7 @@ let main ~upstream ~port ~interface ~certificate_file ~key_file ~no_auth () =
     ; post "/elfeed/**" (Proxy.forward ~upstream ~method':`POST)
     ; (* Web stuff *)
       get "/" (fun req -> redirect req "/index.html")
-    ; get "/start" Proxy.start_page
+    ; get "/start.html" Proxy.start_page
     ; get "/**" (static "./web") ]
   in
   run ~interface ~port ~certificate_file ~key_file ~tls:true

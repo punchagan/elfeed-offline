@@ -87,7 +87,7 @@ let open_selected_entry _ =
 let close_entry _ =
   Document.body G.document |> El.set_class (Jstr.of_string "reading") false ;
   let content_el = get_element_by_id_exn "content" in
-  El.set_at At.Name.src (Some (Jstr.v "/start")) content_el ;
+  El.set_at At.Name.src (Some (Jstr.v "/start.html")) content_el ;
   state.opened <- None ;
   set_status_msg "" ;
   State.bump_epoch ()

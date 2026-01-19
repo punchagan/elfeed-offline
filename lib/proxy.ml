@@ -55,9 +55,10 @@ let wrapped_html html =
 |}
     html
 
-let start_page _ =
+let start_html ~is_static =
   let html =
-    {|
+    Printf.sprintf
+      {|
 <div class="elfeed-offline-start">
   <h1>Elfeed Offline</h1>
   <p class="primary">
@@ -69,10 +70,17 @@ let start_page _ =
   <p id="shortcuts-hint" class="hint">
     Tip: Press <kbd>?</kbd> to see keyboard shortcuts.
   </p>
+  %s
 </div>
 |}
+      ( if is_static then
+          "<p class=\"hint\">This is a demo of the Elfeed-offline UI running \
+           without a backend OCaml and Emacs server</p>"
+        else "" )
   in
-  Dream.respond ~status:`OK (wrapped_html html)
+  wrapped_html html
+
+let start_page _ = Dream.respond ~status:`OK (start_html ~is_static:false)
 
 (** [sanitize_headers] strips out HTTP/1 headers before returning the response.
     Some clients for example Safari and even newer versions of curl are pretty

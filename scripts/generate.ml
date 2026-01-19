@@ -131,6 +131,11 @@ let () =
       in
       Lwt.return sorted_entries )
   in
+  (* Write start_html *)
+  let oc = open_out "web/start.html" in
+  output_string oc (Elfeed_offline.Proxy.start_html ~is_static:true) ;
+  close_out oc ;
+  Printf.printf "Generated start.html page entries\n" ;
   (* Write JSON output *)
   let elfeed_dir = "web/elfeed" in
   if not (Sys.file_exists elfeed_dir && Sys.is_directory elfeed_dir) then
@@ -154,5 +159,5 @@ let () =
   if not (Sys.file_exists content_dir && Sys.is_directory content_dir) then
     Unix.mkdir content_dir 0o755 ;
   write_content_files ~content_dir all_entries ;
-  Printf.printf "Generated content directory with %d entries\n"
+  Printf.printf "Generated content directory? with %d entries\n"
     (List.length all_entries)
