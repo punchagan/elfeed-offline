@@ -70,7 +70,6 @@ let close_entry _ =
   let content_el = get_element_by_id_exn "content" in
   El.set_at At.Name.src (Some (Jstr.v "about:blank")) content_el ;
   state.opened <- None ;
-  state.selected_index <- None ;
   set_status_msg "" ;
   State.bump_epoch ()
 
