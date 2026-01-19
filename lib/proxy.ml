@@ -24,6 +24,7 @@ let wrapped_html html =
           padding: 0 1.5rem;
           text-align: center;
           color: CanvasText;
+          font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
         }
         .elfeed-offline-start h1 {
           font-size: 1.4rem;
