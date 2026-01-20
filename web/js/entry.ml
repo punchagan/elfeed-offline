@@ -119,8 +119,8 @@ let make_entry (data : State.entry) =
     (fun e ->
       Ev.prevent_default e ;
       Ev.stop_propagation e ;
-      if data.is_starred then Actions.unstar_entry data.webid
-      else Actions.star_entry data.webid )
+      if data.is_starred then Actions.Tags.unstar_entry data.webid
+      else Actions.Tags.star_entry data.webid )
     (El.as_target star_btn_el)
   |> ignore ;
   let read_unread_btn_el = Icons.read_unread_el data in
@@ -128,8 +128,8 @@ let make_entry (data : State.entry) =
     (fun e ->
       Ev.prevent_default e ;
       Ev.stop_propagation e ;
-      if data.is_unread then Actions.mark_as_read data.webid
-      else Actions.mark_as_unread data.webid )
+      if data.is_unread then Actions.Tags.mark_entry_as_read data.webid
+      else Actions.Tags.mark_entry_as_unread data.webid )
     (El.as_target read_unread_btn_el)
   |> ignore ;
   let icon_span =
