@@ -65,7 +65,7 @@ let hook_nav_status () =
       G.request_animation_frame (fun _ -> render ()) |> ignore ) ;
   render ()
 
-let open_selected_entry _ =
+let open_selected_entry () =
   match state.selected_index with
   | None ->
       ()
@@ -84,7 +84,7 @@ let open_selected_entry _ =
           State.state.opened <- Some webid ;
           State.bump_epoch () )
 
-let close_entry _ =
+let close_entry () =
   Document.body G.document |> El.set_class (Jstr.of_string "reading") false ;
   let content_el = get_element_by_id_exn "content" in
   El.set_at At.Name.src (Some (Jstr.v "/start.html")) content_el ;
@@ -92,7 +92,7 @@ let close_entry _ =
   set_status_msg "" ;
   State.bump_epoch ()
 
-let open_prev_entry _ =
+let open_prev_entry () =
   match state.opened with
   | None ->
       ()
@@ -111,7 +111,7 @@ let open_prev_entry _ =
       | _ ->
           () )
 
-let open_next_entry _ =
+let open_next_entry () =
   match state.opened with
   | None ->
       ()
@@ -133,7 +133,7 @@ let open_next_entry _ =
       | _ ->
           () )
 
-let select_next_entry _ =
+let select_next_entry () =
   ( match state.selected_index with
   | None ->
       state.selected_index <- Some 0
@@ -142,7 +142,7 @@ let select_next_entry _ =
       state.selected_index <- Some new' ) ;
   State.bump_epoch ()
 
-let select_prev_entry _ =
+let select_prev_entry () =
   ( match state.selected_index with
   | None ->
       state.selected_index <- Some (List.length state.results - 1)
@@ -151,7 +151,7 @@ let select_prev_entry _ =
       state.selected_index <- Some new' ) ;
   State.bump_epoch ()
 
-let copy_entry_url _ =
+let copy_entry_url () =
   match state.opened with
   | None ->
       ()
@@ -167,7 +167,7 @@ let copy_entry_url _ =
           | Error _ ->
               set_status_msg "Failed to copy URL to clipboard" )
 
-let browse_entry _ =
+let browse_entry () =
   match state.opened with
   | None ->
       ()
@@ -177,26 +177,26 @@ let browse_entry _ =
       in
       Window.open' G.window link |> ignore
 
-let mark_as_read _ =
+let mark_as_read () =
   match state.opened with
   | None ->
       ()
   | Some webid ->
       Tags.mark_entry_as_read webid
 
-let mark_as_unread _ =
+let mark_as_unread () =
   match state.opened with
   | None ->
       ()
   | Some webid ->
       Tags.mark_entry_as_unread webid
 
-let star_entry _ =
+let star_entry () =
   match state.opened with None -> () | Some webid -> Tags.star_entry webid
 
-let unstar_entry _ =
+let unstar_entry () =
   match state.opened with None -> () | Some webid -> Tags.unstar_entry webid
 
-let focus_search_input _ =
+let focus_search_input () =
   let search_input_el = get_element_by_id_exn "q" in
   El.set_has_focus true search_input_el

@@ -124,30 +124,49 @@ let setup_nav_handlers () =
   Actions.hook_nav_status () ;
   (* Hook up close-btn click handler *)
   let close_btn_el = get_element_by_id_exn "close-entry" in
-  Ev.listen Ev.click Actions.close_entry (El.as_target close_btn_el) |> ignore ;
+  Ev.listen Ev.click
+    (fun _evt -> Actions.close_entry ())
+    (El.as_target close_btn_el)
+  |> ignore ;
   (* Hook up prev-btn click handler *)
   let prev_btn_el = get_element_by_id_exn "prev-entry" in
-  Ev.listen Ev.click Actions.open_prev_entry (El.as_target prev_btn_el)
+  Ev.listen Ev.click
+    (fun _evt -> Actions.open_prev_entry ())
+    (El.as_target prev_btn_el)
   |> ignore ;
   (* Hook up next-btn click handler *)
   let next_btn_el = get_element_by_id_exn "next-entry" in
-  Ev.listen Ev.click Actions.open_next_entry (El.as_target next_btn_el)
+  Ev.listen Ev.click
+    (fun _evt -> Actions.open_next_entry ())
+    (El.as_target next_btn_el)
   |> ignore ;
   (* Hook up mark-as-read handler *)
   let mark_read_btn_el = get_element_by_id_exn "mark-read" in
-  Ev.listen Ev.click Actions.mark_as_read (El.as_target mark_read_btn_el)
+  Ev.listen Ev.click
+    (fun _evt -> Actions.mark_as_read ())
+    (El.as_target mark_read_btn_el)
   |> ignore ;
   (* Hook up mark-as-unread handler *)
   let mark_unread_btn_el = get_element_by_id_exn "mark-unread" in
-  Ev.listen Ev.click Actions.mark_as_unread (El.as_target mark_unread_btn_el)
+  Ev.listen Ev.click
+    (fun _evt -> Actions.mark_as_unread ())
+    (El.as_target mark_unread_btn_el)
   |> ignore ;
   (* Hook up star-entry handler *)
   let star_btn_el = get_element_by_id_exn "star-entry" in
-  Ev.listen Ev.click Actions.star_entry (El.as_target star_btn_el) |> ignore ;
+  Ev.listen Ev.click
+    (fun _evt -> Actions.star_entry ())
+    (El.as_target star_btn_el)
+  |> ignore ;
   (* Hook up unstar-entry handler *)
   let unstar_btn_el = get_element_by_id_exn "unstar-entry" in
-  Ev.listen Ev.click Actions.unstar_entry (El.as_target unstar_btn_el) |> ignore ;
+  Ev.listen Ev.click
+    (fun _evt -> Actions.unstar_entry ())
+    (El.as_target unstar_btn_el)
+  |> ignore ;
   (* Hook up copy-url handler *)
   let copy_url_btn_el = get_element_by_id_exn "copy-url" in
-  Ev.listen Ev.click Actions.copy_entry_url (El.as_target copy_url_btn_el)
+  Ev.listen Ev.click
+    (fun _evt -> Actions.copy_entry_url ())
+    (El.as_target copy_url_btn_el)
   |> ignore
