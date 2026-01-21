@@ -354,15 +354,7 @@ module Tags = struct
     let open Fut.Result_syntax in
     let _ =
       let* updates = get_updates () in
-      if List.length updates = 0 then Fut.ok ()
-      else (
-        Notify.notify_all (Msg.Offline_tags updates) |> ignore ;
-        let msg =
-          Printf.sprintf "You have %d pending tag updates to sync."
-            (List.length updates)
-        in
-        Console.log [Jv.of_string msg] ;
-        Fut.ok () )
+      Notify.notify_all (Msg.Offline_tags updates)
     in
     ()
 
@@ -379,11 +371,7 @@ module Tags = struct
     let open Fut.Result_syntax in
     let q = Queue.create () in
     let rec worker () =
-      if Queue.is_empty q then (
-        notify_pending_updates () ;
-        Prefetch.prefetch_alternate_search_with_content
-          ~notify_last_update:false () ;
-        () )
+      if Queue.is_empty q then notify_pending_updates ()
       else
         let update = Queue.pop q in
         Fut.await (sync_update update) (function
@@ -466,12 +454,8 @@ module Tags = struct
         if List.length webids > 0 then Queue.push (`Remove, tag, webids) q )
       remove_map ;
     let rec worker () =
-      if Queue.is_empty q then (
-        notify_pending_updates () ;
-        set_updates [] |> ignore ;
-        Prefetch.prefetch_alternate_search_with_content
-          ~notify_last_update:false () ;
-        () )
+      if Queue.is_empty q then
+        Fut.await (set_updates []) (fun _ -> notify_pending_updates ())
       else
         let ((action, tag, webids) as update) = Queue.pop q in
         let request = mk_tags_request ~web_ids:webids ~tags:[tag] ~action in

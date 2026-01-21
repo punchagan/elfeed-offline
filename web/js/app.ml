@@ -236,7 +236,11 @@ let on_message e =
         updates ;
       State.bump_update_entries () ;
       let n = List.length updates in
-      set_status (Printf.sprintf "%d updates pending until online." n)
+      let msg =
+        if n > 0 then Printf.sprintf "%d updates pending until online." n
+        else "All tag updates synchronized with server."
+      in
+      set_status msg
   | Set_last_update {timestamp} -> (
       Heartbeat.set_last_update timestamp ;
       match Ptime.of_float_s timestamp with
