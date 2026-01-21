@@ -43,6 +43,14 @@ let update_entries () =
           State.state.selected_index <- current_index
     | None ->
         () ) ;
+    (* Improve behavior when marking last entry as read in a view filtering for
+       unread entries. *)
+    ( match State.state.selected_index with
+    | None ->
+        ()
+    | Some idx ->
+        let n = List.length State.state.results in
+        if idx >= n then State.state.selected_index <- n - 1 |> Option.some ) ;
     let n = List.length State.state.results in
     let status = "found " ^ string_of_int n ^ " items" in
     set_status status ;
