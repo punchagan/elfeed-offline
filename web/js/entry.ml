@@ -114,11 +114,16 @@ let make_entry (data : State.entry) =
       ~at:[At.v At.Name.class' (Jstr.of_string "tags")]
       (Jstr.of_string "div") chips
   in
+  let entry_index =
+    State.state.results |> List.find_index (fun w -> String.equal w data.webid)
+  in
   let star_btn_el = Icons.star_button_el data in
   Ev.listen Ev.click
     (fun e ->
       Ev.prevent_default e ;
       Ev.stop_propagation e ;
+      if Option.is_some entry_index then
+        State.state.selected_index <- entry_index ;
       if data.is_starred then Actions.Tags.unstar_entry data.webid
       else Actions.Tags.star_entry data.webid )
     (El.as_target star_btn_el)
@@ -128,6 +133,8 @@ let make_entry (data : State.entry) =
     (fun e ->
       Ev.prevent_default e ;
       Ev.stop_propagation e ;
+      if Option.is_some entry_index then
+        State.state.selected_index <- entry_index ;
       if data.is_unread then Actions.Tags.mark_entry_as_read data.webid
       else Actions.Tags.mark_entry_as_unread data.webid )
     (El.as_target read_unread_btn_el)
@@ -144,8 +151,8 @@ let make_entry (data : State.entry) =
       (Jstr.of_string "div") [date_el; icon_span]
   in
   let is_selected =
-    match State.state.selected_index with
-    | Some idx when List.nth_opt State.state.results idx = Some data.webid ->
+    match (State.state.selected_index, entry_index) with
+    | Some idx, Some idx' when idx = idx' ->
         true
     | _ ->
         false
