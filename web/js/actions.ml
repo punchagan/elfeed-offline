@@ -167,6 +167,34 @@ let copy_entry_url () =
           | Error _ ->
               set_status_msg "Failed to copy URL to clipboard" )
 
+let share_entry () =
+  match state.opened with
+  | None ->
+      ()
+  | Some webid -> (
+      let entry = Hashtbl.find state.entries webid in
+      let nav_jv = Navigator.to_jv G.navigator in
+      match Jv.get nav_jv "share" with
+      | t when Jv.is_none t ->
+          copy_entry_url ()
+      | share ->
+          let d = Jv.obj [||] in
+          Jv.set d "title" (Jv.of_string entry.title) ;
+          Jv.set d "url" (Jv.of_string entry.link) ;
+          let selection =
+            let iframe = get_element_by_id_exn "content" in
+            let doc = Jv.get (El.to_jv iframe) "contentDocument" in
+            let s = Jv.call doc "getSelection" [||] in
+            Jv.call s "toString" [||]
+          in
+          Jv.set d "text" selection ;
+          let p = Jv.call nav_jv "share" [|d|] in
+          Fut.await (Fut.of_promise' p ~ok:Fun.id ~error:Fun.id) (function
+            | Ok _ ->
+                set_status_msg "Entry shared successfully"
+            | Error _ ->
+                set_status_msg "Failed to share entry" ) )
+
 let browse_entry () =
   match state.opened with
   | None ->

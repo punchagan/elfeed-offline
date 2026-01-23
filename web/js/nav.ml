@@ -167,6 +167,6 @@ let setup_nav_handlers () =
   (* Hook up copy-url handler *)
   let copy_url_btn_el = get_element_by_id_exn "copy-url" in
   Ev.listen Ev.click
-    (fun _evt -> Actions.copy_entry_url ())
+    (fun _evt -> Actions.share_entry ())
     (El.as_target copy_url_btn_el)
   |> ignore
