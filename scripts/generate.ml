@@ -1,7 +1,14 @@
 open Lwt.Infix
 
 let feeds =
-  ["https://ocaml.org/planet.xml"; "https://planet.emacslife.com/atom.xml"]
+  [ "https://ocaml.org/planet.xml"
+  ; "https://planet.emacslife.com/atom.xml"
+  ; "https://planet.haskell.org/atom.xml"
+  ; "https://perl.theplanetarium.org/atom.xml"
+  ; "https://planet.scheme.org/atom.xml"
+  ; "https://planet.clojure.in/atom.xml"
+    (* FIXME: RSS support  "https://planet.lisp.org/rss20.xml" *)
+    (* FIXME: RSS support  "https://planetpython.org/rss20.xml" *) ]
 
 (* Hash function to generate webid similar to Elfeed *)
 let hash_entry ~feed_url ~entry_id =
