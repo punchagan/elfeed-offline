@@ -104,13 +104,17 @@ let fetch_feed url =
   >>= fun body ->
   let source = `String (0, body) in
   let input = Xmlm.make_input source in
-  let feed = Syndic.Atom.parse ~xmlbase:uri input in
-  let title = feed.title |> text_construct_to_string in
-  let entries = feed.entries in
-  Printf.printf "Parsed Atom feed: %s (%d entries)\n" title
-    (List.length entries) ;
-  let entries = List.map (entry_to_json url title) entries in
-  Lwt.return entries
+  match Syndic.Atom.parse ~xmlbase:uri input with
+  | exception e ->
+      Printf.eprintf "Error parsing feed %s: %s\n" url (Printexc.to_string e) ;
+      Lwt.return []
+  | feed ->
+      let title = feed.title |> text_construct_to_string in
+      let entries = feed.entries in
+      Printf.printf "Parsed Atom feed: %s (%d entries)\n" title
+        (List.length entries) ;
+      let entries = List.map (entry_to_json url title) entries in
+      Lwt.return entries
 
 let () =
   let open Yojson.Safe in
