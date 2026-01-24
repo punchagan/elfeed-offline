@@ -176,6 +176,7 @@ let share_entry () =
       let nav_jv = Navigator.to_jv G.navigator in
       match Jv.get nav_jv "share" with
       | t when Jv.is_none t ->
+          Console.log [Jv.of_string "Share API not supported"] ;
           copy_entry_url ()
       | share ->
           let d = Jv.obj [||] in

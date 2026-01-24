@@ -39,11 +39,13 @@ let replace_iframe_location (el : El.t) (path : Jstr.t) =
     ignore @@ Jv.call loc "replace" [|Jv.of_jstr path|]
 
 let render_nav () =
+  let has_share_api = Jv.get Jv.global "navigator" |> Jv.has "share" in
   let mark_read_btn = get_element_by_id_exn "mark-read" in
   let mark_unread_btn = get_element_by_id_exn "mark-unread" in
   let star_btn = get_element_by_id_exn "star-entry" in
   let unstar_btn = get_element_by_id_exn "unstar-entry" in
   let copy_url_btn = get_element_by_id_exn "copy-url" in
+  let share_btn = get_element_by_id_exn "share-entry" in
   let close_btn_el = get_element_by_id_exn "close-entry" in
   let next_btn_el = get_element_by_id_exn "next-entry" in
   let prev_btn_el = get_element_by_id_exn "prev-entry" in
@@ -101,7 +103,11 @@ let render_nav () =
               else set_button_enabled prev_btn_el false ) ;
           (* Other buttons *)
           set_button_enabled close_btn_el true ;
-          set_button_enabled copy_url_btn true ;
+          set_button_visible share_btn has_share_api ;
+          set_button_enabled share_btn has_share_api ;
+          set_button_visible copy_url_btn (not has_share_api) ;
+          set_button_enabled copy_url_btn (not has_share_api) ;
+          (* Set title and feed name *)
           let title = entry.title in
           set_text title_el title ;
           let feed = entry.feed.title in
@@ -167,6 +173,12 @@ let setup_nav_handlers () =
   (* Hook up copy-url handler *)
   let copy_url_btn_el = get_element_by_id_exn "copy-url" in
   Ev.listen Ev.click
-    (fun _evt -> Actions.share_entry ())
+    (fun _evt -> Actions.copy_entry_url ())
     (El.as_target copy_url_btn_el)
+  |> ignore ;
+  (* Hook up share button handler *)
+  let share_btn_el = get_element_by_id_exn "share-entry" in
+  Ev.listen Ev.click
+    (fun _evt -> Actions.share_entry ())
+    (El.as_target share_btn_el)
   |> ignore
