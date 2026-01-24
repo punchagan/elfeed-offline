@@ -163,5 +163,5 @@ let () =
   if not (Sys.file_exists content_dir && Sys.is_directory content_dir) then
     Unix.mkdir content_dir 0o755 ;
   write_content_files ~content_dir all_entries ;
-  Printf.printf "Generated content directory? with %d entries\n"
+  Printf.printf "Generated content directory with %d entries\n"
     (List.length all_entries)
