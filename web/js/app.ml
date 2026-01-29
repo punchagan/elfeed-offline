@@ -226,7 +226,7 @@ let on_message e =
   | Prefetch_error {msg} ->
       set_status (Printf.sprintf "Error: %s" msg)
   | Search_update {delay} ->
-      if delay < 0.5 then
+      if delay < 0.75 then
         (* When the previous response was probably not "read" by the user,
            automatically update the UI. *)
         search ()
