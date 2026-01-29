@@ -4,6 +4,9 @@ let is_content_uri uri =
   uri |> Uri.path |> String.starts_with ~prefix:"/elfeed/content/"
 
 let wrapped_html html =
+  (* NOTE: The cache version may need to be bumped up if the wrapped HTML is
+     bumped since we always return the content from the cache if it is
+     available. *)
   Printf.sprintf
     {|
 <!doctype html>

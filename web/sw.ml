@@ -561,7 +561,9 @@ let on_fetch e =
           Fetch_strategy.cache_first_with_refresh request Config.c_shell
         in
         Fetch.Ev.respond_with e response
-    (* Content at a hash would never change *)
+    (* Content at a hash would never change. Ideally, this should be the case
+       but note that we return a "wrapped" HTML which could change. Invalidate
+       the cache for such cases by bumping up the version number. *)
     | s when Jstr.starts_with ~prefix:(Jstr.of_string "/elfeed/content") path ->
         let response = Fetch_strategy.cache_first request Config.c_content in
         Fetch.Ev.respond_with e response
