@@ -21,32 +21,6 @@ let wrapped_html html =
             height: auto;
             object-fit: contain;
         }
-        .elfeed-offline-start {
-          max-width: 42rem;
-          margin: 15vh auto 0;
-          padding: 0 1.5rem;
-          text-align: center;
-          color: CanvasText;
-          font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-        }
-        .elfeed-offline-start h1 {
-          font-size: 1.4rem;
-          font-weight: 600;
-          margin-bottom: 1rem;
-        }
-        .elfeed-offline-start .primary {
-          font-size: 1rem;
-          margin-bottom: 0.75rem;
-        }
-        .elfeed-offline-start .secondary {
-          font-size: 0.9rem;
-          opacity: 0.75;
-          margin-bottom: 1.25rem;
-        }
-        .elfeed-offline-start .hint {
-          font-size: 0.85rem;
-          opacity: 0.6;
-        }
         </style>
         <meta charset='utf-8' />
         <base target='_blank' />
@@ -62,26 +36,33 @@ let start_html ~is_static =
   let html =
     Printf.sprintf
       {|
-<div class="elfeed-offline-start">
-  <h1>Elfeed Offline</h1>
-  <p class="primary">
-    Select an entry from the sidebar to start reading.
-  </p>
-  <p class="secondary">
-    Articles are loaded here and can be read offline once cached.
-  </p>
-  <p id="shortcuts-hint" class="hint">
-    Tip: Press <kbd>?</kbd> to see keyboard shortcuts.
-  </p>
-  %s
-</div>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Elfeed Offline</title>
+    <link rel="stylesheet" href="/css/app.css" />
+  </head>
+  <body>
+    <div class="elfeed-offline-start">
+      <h1>Elfeed Offline</h1>
+      <p class="primary">Select an entry from the sidebar to start reading.</p>
+      <p class="secondary">
+        Articles are loaded here and can be read offline once cached.
+      </p>
+      <p id="shortcuts-hint" class="hint">
+        Tip: Press <kbd>?</kbd> to see keyboard shortcuts.
+      </p>
+      %s
+    </div>
+  </body>
+</html>
 |}
       ( if is_static then
           "<p class=\"hint\">This is a demo of the Elfeed-offline UI running \
            without a backend OCaml and Emacs server</p>"
         else "" )
   in
-  wrapped_html html
+  html
 
 let start_page _ = Dream.respond ~status:`OK (start_html ~is_static:false)
 
