@@ -4,7 +4,7 @@ module Msg = Elfeed_shared.Elfeed_message
 
 let delay_ms = 60 * 1000 (* Check once every minute *)
 
-let timeout = 5 * 1000 (* 5 second timeout for fetch requests *)
+let timeout = 3 * 1000 (* 3 second timeout for fetch requests *)
 
 let storage = Storage.local G.window
 
