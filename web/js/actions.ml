@@ -152,13 +152,18 @@ let select_prev_entry () =
   State.bump_epoch ()
 
 let copy_entry_url () =
-  match state.opened with
+  let open_entry =
+    match state.opened with
+    | None ->
+        None
+    | Some webid ->
+        Hashtbl.find_opt state.entries webid
+  in
+  match open_entry with
   | None ->
       ()
-  | Some webid ->
-      let link =
-        Hashtbl.find state.entries webid |> (fun x -> x.link) |> Jstr.v
-      in
+  | Some entry ->
+      let link = entry.link |> Jstr.v in
       let clipboard = Clipboard.of_navigator G.navigator in
       Fut.await (Clipboard.write_text clipboard link) (fun result ->
           match result with
@@ -168,11 +173,17 @@ let copy_entry_url () =
               set_status_msg "Failed to copy URL to clipboard" )
 
 let share_entry () =
-  match state.opened with
+  let open_entry =
+    match state.opened with
+    | None ->
+        None
+    | Some webid ->
+        Hashtbl.find_opt state.entries webid
+  in
+  match open_entry with
   | None ->
       ()
-  | Some webid -> (
-      let entry = Hashtbl.find state.entries webid in
+  | Some entry -> (
       let nav_jv = Navigator.to_jv G.navigator in
       match Jv.get nav_jv "share" with
       | t when Jv.is_none t ->
@@ -197,13 +208,18 @@ let share_entry () =
                 set_status_msg "Failed to share entry" ) )
 
 let browse_entry () =
-  match state.opened with
+  let open_entry =
+    match state.opened with
+    | None ->
+        None
+    | Some webid ->
+        Hashtbl.find_opt state.entries webid
+  in
+  match open_entry with
   | None ->
       ()
-  | Some webid ->
-      let link =
-        Hashtbl.find state.entries webid |> (fun x -> x.link) |> Jstr.v
-      in
+  | Some entry ->
+      let link = entry.link |> Jstr.v in
       Window.open' G.window link |> ignore
 
 let mark_as_read () =

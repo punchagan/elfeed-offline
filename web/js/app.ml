@@ -21,7 +21,7 @@ let update_entries () =
     in
     (* Update entry state *)
     webids_to_update
-    |> List.map (fun webid -> Hashtbl.find State.state.entries webid)
+    |> List.filter_map (fun webid -> Hashtbl.find_opt State.state.entries webid)
     |> List.map (Entry.update_entry_tags ~state:State.state)
     |> List.iter (fun (e : State.entry) ->
         Hashtbl.replace State.state.entries e.webid e ) ;
@@ -29,7 +29,8 @@ let update_entries () =
     let query = get_query () |> Jstr.to_string in
     let updated_entries =
       State.state.results
-      |> List.map (fun webid -> Hashtbl.find State.state.entries webid)
+      |> List.filter_map (fun webid ->
+          Hashtbl.find_opt State.state.entries webid )
       |> Offline_search.filter_results ~query
       |> List.map (fun (e : State.entry) -> e.webid)
     in
@@ -65,7 +66,8 @@ let results_sidebar_doc : Elwd.t Lwd.t =
     Lwd.get State.epoch_v
     |> Lwd.map ~f:(fun _ ->
         State.state.results
-        |> List.map (fun webid -> Hashtbl.find State.state.entries webid)
+        |> List.filter_map (fun webid ->
+            Hashtbl.find_opt State.state.entries webid )
         |> List.map (fun entry -> Entry.make_entry entry)
         |> Lwd_seq.of_list )
   in
@@ -90,8 +92,9 @@ let mount_into (host : El.t) (doc : Elwd.t Lwd.t) =
 let prefetch_top_n ?(n = 30) _click_evt =
   let hashes =
     State.state.results |> List.take n
-    |> List.map (fun webid ->
-        Hashtbl.find State.state.entries webid |> fun e -> e.content_hash )
+    |> List.filter_map (fun webid ->
+        Hashtbl.find_opt State.state.entries webid )
+    |> List.map (fun (e : State.entry) -> e.content_hash)
   in
   if
     Msg.request_prefetch ~notify:true ~notify_last_update:false
@@ -199,9 +202,9 @@ let search () =
           Console.log [Jv.of_string "Prefetching content for search results..."] ;
           let hashes =
             State.state.results
-            |> List.map (fun webid ->
-                Hashtbl.find State.state.entries webid
-                |> fun e -> e.content_hash )
+            |> List.filter_map (fun webid ->
+                Hashtbl.find_opt State.state.entries webid )
+            |> List.map (fun (e : State.entry) -> e.content_hash)
           in
           Msg.request_prefetch ~notify:false ~notify_last_update:false
             ~prefetch_search:false hashes
