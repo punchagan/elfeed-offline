@@ -10,7 +10,7 @@ module Msg = Elfeed_shared.Elfeed_message
 module Config = struct
   let c_shell = "shell-v1" |> Jstr.v
 
-  let c_content = "content-v1" |> Jstr.v
+  let c_content = "content-v2" |> Jstr.v
 
   let c_tags = "tags-v1" |> Jstr.v
 

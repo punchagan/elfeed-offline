@@ -16,7 +16,7 @@ let wrapped_html html =
         :root {
             color-scheme: light dark;
         }
-        img {
+        img,iframe {
             max-width: 100%%;
             height: auto;
             object-fit: contain;
