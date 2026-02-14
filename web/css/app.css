@@ -377,6 +377,9 @@ button,
     body.reading #results {
         display: none;
     }
+    body.reading header {
+        display: none;
+    }
 }
 
 /* Elfeed offline start page styles */
