@@ -371,7 +371,7 @@ button,
     }
     body.reading #reader {
         display: block;
-        height: calc(100vh - var(--top-section-height));
+        height: calc(100vh - var(--top-section-height) + 43px);
     }
     body.reading #results {
         display: none;
