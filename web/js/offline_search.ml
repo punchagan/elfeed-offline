@@ -159,29 +159,14 @@ let entry_matches_filter (entry : State.entry) (filter : Filter.t) : bool =
     | Some after_ms ->
         entry.published_ms >= after_ms
   in
-  let url = Uri.of_string entry.feed.url in
-  let hostname = Uri.host url in
-  (* TODO: Currently only allow feed search by hostname *)
+  (* NOTE: Currently only allow feed search by full feed URL *)
   let feeds_ok =
     List.length filter.feeds = 0
-    || List.exists
-         (fun feed_url ->
-           match hostname with
-           | Some host ->
-               String.equal host feed_url
-           | None ->
-               String.equal entry.feed.url feed_url )
-         filter.feeds
+    || List.exists (String.equal entry.feed.url) filter.feeds
   in
   let not_feeds_ok =
     List.for_all
-      (fun feed_url ->
-        not
-          ( match hostname with
-          | Some host ->
-              String.equal host feed_url
-          | None ->
-              String.equal entry.feed.url feed_url ) )
+      (fun feed_url -> not (String.equal entry.feed.url feed_url))
       filter.not_feeds
   in
   let matches_ok =

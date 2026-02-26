@@ -34,8 +34,8 @@ let search_add_remove_feed_url evt =
   match feed_url with
   | None ->
       ()
-  | Some feed_title ->
-      let search_text = Printf.sprintf "=%s" feed_title |> Jstr.v in
+  | Some feed_url ->
+      let search_text = Printf.sprintf "=%s" feed_url |> Jstr.v in
       let q_el = Util.get_element_by_id_exn "q" in
       let current_q = El.prop El.Prop.value q_el in
       let new_q = Util.add_or_remove_substring current_q search_text in
@@ -77,14 +77,8 @@ let make_entry (data : State.entry) =
       (Jstr.of_string "span")
       [data.feed.title |> Jstr.v |> El.txt]
   in
-  let feed_hostname =
-    match data.feed.url |> Jstr.v |> Uri.of_jstr with
-    | Ok uri ->
-        Some (Uri.host uri)
-    | Error _ ->
-        None
-  in
-  El.set_at (Jstr.of_string "data-url") feed_hostname feed_el ;
+  let feed_url = data.feed.url |> Jstr.v in
+  El.set_at (Jstr.of_string "data-url") (Some feed_url) feed_el ;
   Ev.listen Ev.click search_add_remove_feed_url (El.as_target feed_el) |> ignore ;
   let date = format_date data.published_ms in
   let date_el =
