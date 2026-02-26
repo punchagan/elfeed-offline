@@ -391,6 +391,9 @@ let () =
   (* Set state from URL params *)
   Location.set_state_from_location_hash () ;
   Location.hook_location_update () ;
+  (* Set reading mode, based on state *)
+  if State.state.reading then
+    Document.body G.document |> El.set_class (Jstr.of_string "reading") true ;
   (* Setup heartbeat *)
   Heartbeat.heartbeat () ;
   request_offline_tags () ;

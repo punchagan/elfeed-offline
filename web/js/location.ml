@@ -12,11 +12,16 @@ let set_state_from_location_hash () =
   | Some v ->
       (* TODO :Uri decode?? *)
       State.state.search_query <- Jstr.to_string v ) ;
-  match Uri.Params.find (Jstr.v "webid") params with
+  ( match Uri.Params.find (Jstr.v "webid") params with
   | None ->
       ()
   | Some v ->
-      State.state.opened <- Some (Jstr.to_string v)
+      State.state.opened <- Some (Jstr.to_string v) ) ;
+  match Uri.Params.find (Jstr.v "reading") params with
+  | None ->
+      State.state.reading <- false
+  | Some v ->
+      State.state.reading <- not (Jstr.equal (Jstr.v "0") v)
 
 let set_location_hash () =
   let location = G.window |> Window.location in
@@ -24,6 +29,11 @@ let set_location_hash () =
     if State.state.search_query <> "" then
       [(Jstr.v "q", Jstr.v State.state.search_query)]
     else []
+  in
+  let fragments_assoc =
+    if State.state.reading then
+      (Jstr.v "reading", Jstr.v "1") :: fragments_assoc
+    else fragments_assoc
   in
   let fragments =
     ( match State.state.opened with

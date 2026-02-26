@@ -78,6 +78,7 @@ let open_selected_entry () =
           (* Set reading mode *)
           Document.body G.document
           |> El.set_class (Jstr.of_string "reading") true ;
+          State.state.reading <- true ;
           (* Set focus to iframe for arrow keys, etc to work for navigation *)
           let content_el = get_element_by_id_exn "content" in
           El.set_has_focus true content_el ;
@@ -88,7 +89,8 @@ let close_entry () =
   Document.body G.document |> El.set_class (Jstr.of_string "reading") false ;
   let content_el = get_element_by_id_exn "content" in
   El.set_at At.Name.src (Some (Jstr.v "/start.html")) content_el ;
-  state.opened <- None ;
+  State.state.opened <- None ;
+  State.state.reading <- false ;
   set_status_msg "" ;
   State.bump_epoch ()
 
