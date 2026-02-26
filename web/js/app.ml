@@ -63,7 +63,7 @@ let update_entries () =
 
 let results_sidebar_doc : Elwd.t Lwd.t =
   let children : El.t Lwd_seq.t Lwd.t =
-    Lwd.get State.epoch_v
+    Lwd.get State.update_entries
     |> Lwd.map ~f:(fun _ ->
         State.state.results
         |> List.filter_map (fun webid ->
