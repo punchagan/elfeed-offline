@@ -58,8 +58,8 @@ let render_nav () =
       set_button_visible entry_nav_el false ;
       set_text title_el "" ;
       set_text feed_el ""
-  | Some s -> (
-      let entry = Hashtbl.find_opt state.entries s in
+  | Some opened_id -> (
+      let entry = Hashtbl.find_opt state.entries opened_id in
       match entry with
       | None ->
           ()
@@ -85,7 +85,7 @@ let render_nav () =
           (* Next/Prev buttons *)
           let results = state.results in
           let current_index =
-            List.find_index (fun id -> id = s) state.results
+            List.find_index (fun id -> id = opened_id) state.results
           in
           let index_ =
             if Option.is_some current_index then current_index
@@ -96,11 +96,15 @@ let render_nav () =
               set_button_enabled next_btn_el false ;
               set_button_enabled prev_btn_el false
           | Some index ->
-              if index < List.length results - 1 then
-                set_button_enabled next_btn_el true
-              else set_button_enabled next_btn_el false ;
-              if index > 0 then set_button_enabled prev_btn_el true
-              else set_button_enabled prev_btn_el false ) ;
+              let has_next =
+                (* Enable next button if the currently opened item is not in
+                   the results list, and there's only one item remaining. *)
+                (List.length results = 1 && current_index = None)
+                || index < List.length results - 1
+              in
+              set_button_enabled next_btn_el has_next ;
+              let has_prev = index > 0 in
+              set_button_enabled prev_btn_el has_prev ) ;
           (* Other buttons *)
           set_button_enabled close_btn_el true ;
           set_button_visible share_btn has_share_api ;

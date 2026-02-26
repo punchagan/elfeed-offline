@@ -124,7 +124,8 @@ let open_next_entry () =
       in
       match (current_index, state.selected_index) with
       | Some index, _ | _, Some index ->
-          if index < List.length results - 1 then (
+          let n = List.length results in
+          if n = 1 || index < n - 1 then (
             let next_index =
               if Option.is_some current_index then index + 1 else index
             in
