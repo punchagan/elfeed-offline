@@ -23,6 +23,19 @@ let main ~upstream ~port ~interface ~certificate_file ~key_file ~no_auth () =
              both variables or run with --no-auth to disable authentication."
   in
   let open Dream in
+  let static_routes =
+    List.filter_map
+      (fun file ->
+        let path = "/" ^ file in
+        match Web_content.read file with
+        | Some content ->
+            Some (get path (fun _ -> respond content))
+        | None ->
+            Printf.eprintf "Warning: Failed to read content for file '%s'\n"
+              file ;
+            None )
+      Web_content.file_list
+  in
   let routes =
     [ (* Proxy /elfeed endpoints to the Elfeed server *)
       get "/elfeed/**" (Proxy.forward ~upstream ~method':`GET)
@@ -30,11 +43,11 @@ let main ~upstream ~port ~interface ~certificate_file ~key_file ~no_auth () =
     ; post "/elfeed/**" (Proxy.forward ~upstream ~method':`POST)
     ; (* Web stuff *)
       get "/" (fun req -> redirect req "/index.html")
-    ; get "/start.html" Proxy.start_page
-    ; get "/**" (static "./web") ]
+    ; get "/start.html" Proxy.start_page ]
   in
   run ~interface ~port ~certificate_file ~key_file ~tls:true
-  @@ logger @@ auth @@ router routes
+  @@ logger @@ auth
+  @@ router (routes @ static_routes)
 
 let uri_conv =
   let parse s =

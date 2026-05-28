@@ -5,6 +5,7 @@
  (libraries brr elfeed_offline_web brr-lwd lwd))
 
 (rule
+ ;; Useful for GitHub pages
  (mode promote)
  (target app.js)
  (deps app.bc.js)

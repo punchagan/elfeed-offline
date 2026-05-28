@@ -42,6 +42,8 @@
   astring
   lwd
   brr-lwd
+  ;; to generate web content as OCaml module
+  crunch
   ;; to generate sample data
   syndic)
  (tags

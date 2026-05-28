@@ -5,8 +5,59 @@
  (libraries brr ptime ptime.clock elfeed_shared))
 
 (rule
+ ;; Useful for GitHub pages
  (mode promote)
  (target sw.js)
  (deps sw.bc.js)
  (action
   (copy %{deps} %{target})))
+
+;; Create a crunched module in dist/ subdirectory
+
+(subdir
+ dist
+ (copy_files "../index.html")
+ (copy_files "../favicon.ico")
+ (copy_files "../sw.js")
+ ;; CSS
+ (subdir
+  css
+  (copy_files "../../css/app.css"))
+ ;; JS
+ (subdir
+  js
+  (copy_files "../../js/app.js"))
+ ;; Icons
+ (subdir
+  icons
+  (copy_files "../../icons/icon-192x192.png"))
+ ;; Crunch all the web content into a single OCaml module for distribution
+ (rule
+  (target web_content.ml)
+  (deps
+   "index.html"
+   "sw.js"
+   "js/app.js"
+   "css/app.css"
+   "favicon.ico"
+   "icons/icon-192x192.png")
+  (action
+   (run
+    ocaml-crunch
+    --mode
+    plain
+    --ext
+    js
+    --ext
+    "html"
+    --ext
+    "css"
+    --ext
+    "ico"
+    --ext
+    "png"
+    --output
+    %{target}
+    ".")))
+ (library
+  (name web_content)))
