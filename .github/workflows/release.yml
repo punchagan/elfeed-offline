@@ -10,6 +10,10 @@ jobs:
   release-unix:
     name: Release for ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: write
+
     strategy:
       matrix:
         include:
@@ -20,14 +24,10 @@ jobs:
           - os: ubuntu-latest
             name: x86_64-linux-gnu
     steps:
-
       - uses: actions/checkout@v6
-
       - uses: ocaml-dune/setup-dune@v2
-
       - name: Build the project and create a release tarball
         run: ./scripts/release.sh ${{ matrix.name }} ${{ github.ref_name }}
-
       - name: Upload assets
         uses: ncipollo/release-action@v1
         with:
