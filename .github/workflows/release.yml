@@ -32,4 +32,4 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
-          artifacts: "*.tar.gz"
+          artifacts: "*.tar.gz,*.tar.gz.sha256"
