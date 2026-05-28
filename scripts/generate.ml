@@ -1,7 +1,7 @@
 open Lwt.Infix
 
 let feeds =
-  [ "https://ocaml.org/planet.xml"
+  [ "https://punchagan.github.io/planet-ocaml/feed.xml"
   ; "https://planet.emacslife.com/atom.xml"
   ; "https://planet.haskell.org/atom.xml"
   ; "https://perl.theplanetarium.org/atom.xml"
