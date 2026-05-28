@@ -1,27 +1,6 @@
 module Proxy = Elfeed_offline.Proxy
 
-let main ~upstream ~port ~interface ~certificate_file ~key_file ~no_auth () =
-  if not (Sys.file_exists certificate_file && Sys.file_exists key_file) then
-    failwith
-      (Printf.sprintf
-         "SSL certificate or key file not found at '%s' and '%s'. Please \
-          generate them by running the make-cert.sh script or specify custom \
-          paths with --cert and --key."
-         certificate_file key_file ) ;
-  let auth =
-    if no_auth then fun handler req -> handler req
-    else
-      let username = Sys.getenv_opt "ELFEED_USERNAME" in
-      let password = Sys.getenv_opt "ELFEED_PASSWORD" in
-      match (username, password) with
-      | Some username, Some password ->
-          Proxy.make_basic_auth_middleware ~username ~password ()
-      | _ ->
-          failwith
-            "Authentication is enabled but ELFEED_USERNAME and/or \
-             ELFEED_PASSWORD environment variables are not set. Either set \
-             both variables or run with --no-auth to disable authentication."
-  in
+let main ~upstream ~port ~interface ~certificate_file ~key_file ~auth () =
   let open Dream in
   let static_routes =
     List.filter_map
@@ -56,6 +35,16 @@ let uri_conv =
   let print fmt uri = Format.fprintf fmt "%s" (Uri.to_string uri) in
   Cmdliner.Arg.conv (parse, print)
 
+let need_cert_file ~flag ~kind path =
+  if Sys.file_exists path then Ok path
+  else
+    Error
+      (`Msg
+         (Printf.sprintf
+            "%s not found at %S. Generate it with the make-cert.sh script, or \
+             pass a path with %s."
+            kind path flag ) )
+
 let () =
   let open Cmdliner in
   let open Cmdliner.Term.Syntax in
@@ -76,12 +65,12 @@ let () =
     let doc = "Path to SSL certificate file" in
     Arg.(
       value
-      & opt string "ssl/server.pem"
+      & opt filepath "ssl/server.pem"
       & info ["cert"; "ssl-certificate"] ~doc )
   in
   let key_file =
     let doc = "Path to SSL private key file" in
-    Arg.(value & opt string "ssl/server.key" & info ["ssl-key"; "key"] ~doc)
+    Arg.(value & opt filepath "ssl/server.key" & info ["ssl-key"; "key"] ~doc)
   in
   let no_auth =
     let doc = "Disable authentication (allow unauthenticated access)" in
@@ -94,9 +83,31 @@ let () =
     and+ interface = interface
     and+ certificate_file = certificate_file
     and+ key_file = key_file in
-    main ~upstream:elfeed_web ~port ~interface ~certificate_file ~key_file
-      ~no_auth ()
+    let open Result.Syntax in
+    let* _ =
+      need_cert_file ~flag:"--cert" ~kind:"SSL certificate file" key_file
+    in
+    let* _ = need_cert_file ~flag:"--key" ~kind:"SSL private key" key_file in
+    let* auth =
+      if no_auth then Ok (fun handler req -> handler req)
+      else
+        let username = Sys.getenv_opt "ELFEED_USERNAME" in
+        let password = Sys.getenv_opt "ELFEED_PASSWORD" in
+        match (username, password) with
+        | Some username, Some password ->
+            Ok (Proxy.make_basic_auth_middleware ~username ~password ())
+        | _ ->
+            Error
+              (`Msg
+                 "Authentication is enabled but ELFEED_USERNAME and/or \
+                  ELFEED_PASSWORD environment variables are not set. Set both \
+                  or pass  --no-auth." )
+    in
+    Ok
+      (main ~upstream:elfeed_web ~port ~interface ~certificate_file ~key_file
+         ~auth () )
   in
+  let term = Term.term_result term in
   let cmd =
     let doc = "Elfeed offline proxy server" in
     let info = Cmd.info "elfeed-offline" ~doc in
