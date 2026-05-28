@@ -25,6 +25,7 @@
 
 (package
  (name elfeed-offline)
+ (version 0.1.0)
  (synopsis "Offline-first Elfeed (proxy) server with PWA")
  (description
   "Dream-based proxy + offline PWA, caches entries and syncs tags.")
