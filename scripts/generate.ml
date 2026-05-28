@@ -27,8 +27,10 @@ let text_construct_to_string (tc : Syndic.Atom.text_construct) =
       s
   | Html (_, s) ->
       s
-  | Xhtml (_, _) ->
-      "unknown xhtml"
+  | Xhtml (_, xs) ->
+      xs
+      |> List.map (Syndic.XML.to_string ~ns_prefix:(fun _ -> Some ""))
+      |> String.concat "\n"
 
 let content_to_string (content : Syndic.Atom.content) =
   match content with
@@ -36,8 +38,10 @@ let content_to_string (content : Syndic.Atom.content) =
       s
   | Syndic.Atom.Html (_, s) ->
       s
-  | Syndic.Atom.Xhtml (_, _) ->
-      "unknown xhtml"
+  | Syndic.Atom.Xhtml (_, xs) ->
+      xs
+      |> List.map (Syndic.XML.to_string ~ns_prefix:(fun _ -> Some ""))
+      |> String.concat "\n"
   | Syndic.Atom.Mime (_, s) ->
       s
   | Syndic.Atom.Src (_, uri) ->
