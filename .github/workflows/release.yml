@@ -1,0 +1,35 @@
+---
+name: Build and upload binary releases
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+
+jobs:
+  release-unix:
+    name: Release for ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-15-intel
+            name: x86_64-macos
+          - os: macos-15
+            name: aarch64-macos
+          - os: ubuntu-latest
+            name: x86_64-linux-gnu
+    steps:
+
+      - uses: actions/checkout@v6
+
+      - uses: ocaml-dune/setup-dune@v2
+
+      - name: Build the project and create a release tarball
+        run: ./scripts/release.sh ${{ matrix.name }} ${{ github.ref_name }}
+
+      - name: Upload assets
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifacts: "*.tar.gz"
