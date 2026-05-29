@@ -8,7 +8,7 @@ module Msg = Elfeed_shared.Elfeed_message
 
 (** Configuration for caches and resources to cache  *)
 module Config = struct
-  let c_shell = "shell-v1" |> Jstr.v
+  let c_shell = "shell-v2" |> Jstr.v
 
   let c_content = "content-v2" |> Jstr.v
 
@@ -24,7 +24,8 @@ module Config = struct
     ; "/css/app.css"
     ; "/js/app.js"
     ; (* Icons *)
-      "/icons/icon-192x192.png"
+      "/favicon.ico"
+    ; "/icons/icon-192x192.png"
     ; "/icons/icon-512x512.png"
     ; "/icons/icon-maskable-192x192.png"
     ; "/icons/icon-maskable-512x512.png"

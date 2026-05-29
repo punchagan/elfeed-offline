@@ -14,6 +14,9 @@
 
 ;; Create a crunched module in dist/ subdirectory
 
+;; FIXME: This could be generated from a list of files, which is also used by
+;; the service worker to determine which files to cache.
+
 (subdir
  dist
  (copy_files "../index.html")
@@ -31,18 +34,32 @@
  ;; Icons
  (subdir
   icons
-  (copy_files "../../icons/icon-192x192.png"))
+  (copy_files "../../icons/icon-192x192.png")
+  (copy_files "../../icons/icon-maskable-192x192.png")
+  (copy_files "../../icons/icon-512x512.png")
+  (copy_files "../../icons/icon-maskable-512x512.png"))
+ (subdir
+  screenshots
+  (copy_files "../../screenshots/mobile.png")
+  (copy_files "../../screenshots/desktop.png"))
  ;; Crunch all the web content into a single OCaml module for distribution
  (rule
   (target web_content.ml)
   (deps
+   ;; NOTE: match this list with the shell being cached in the service worker
+   "sw.js" ;; not part of SW's cache list, obviously.
    "index.html"
+   ;; "start.html" ; dynamically returned by the server
    "manifest.webmanifest"
-   "favicon.ico"
-   "sw.js"
    "css/app.css"
    "js/app.js"
-   "icons/icon-192x192.png")
+   "favicon.ico"
+   "icons/icon-192x192.png"
+   "icons/icon-512x512.png"
+   "icons/icon-maskable-192x192.png"
+   "icons/icon-maskable-512x512.png"
+   "screenshots/mobile.png"
+   "screenshots/desktop.png")
   (action
    (run
     ocaml-crunch
