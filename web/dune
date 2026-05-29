@@ -17,6 +17,7 @@
 (subdir
  dist
  (copy_files "../index.html")
+ (copy_files "../manifest.webmanifest")
  (copy_files "../favicon.ico")
  (copy_files "../sw.js")
  ;; CSS
@@ -36,10 +37,11 @@
   (target web_content.ml)
   (deps
    "index.html"
-   "sw.js"
-   "js/app.js"
-   "css/app.css"
+   "manifest.webmanifest"
    "favicon.ico"
+   "sw.js"
+   "css/app.css"
+   "js/app.js"
    "icons/icon-192x192.png")
   (action
    (run
@@ -49,13 +51,15 @@
     --ext
     js
     --ext
-    "html"
+    html
     --ext
-    "css"
+    webmanifest
     --ext
-    "ico"
+    css
     --ext
-    "png"
+    ico
+    --ext
+    png
     --output
     %{target}
     ".")))
