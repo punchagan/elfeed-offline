@@ -8,7 +8,8 @@ let main ~upstream ~port ~interface ~certificate_file ~key_file ~auth () =
         let path = "/" ^ file in
         match Web_content.read file with
         | Some content ->
-            Some (get path (fun _ -> respond content))
+            let headers = [("Content-Type", Magic_mime.lookup file)] in
+            Some (get path (fun _ -> respond ~headers content))
         | None ->
             Printf.eprintf "Warning: Failed to read content for file '%s'\n"
               file ;
